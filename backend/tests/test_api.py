@@ -89,3 +89,85 @@ def test_pixel_crud():
     # Delete pixel
     response = client.delete(f"/api/pixels/{pixel_id}", headers=headers)
     assert response.status_code == 200
+
+def test_vote_on_pin():
+    user_id = "test_user_vote"
+    headers = {"X-User-Id": user_id}
+
+    # Create a pin to vote on
+    pin_data = {"lat": 40.0, "lng": -3.0, "text": "Votable Pin"}
+    response = client.post("/api/pins", json=pin_data, headers=headers)
+    assert response.status_code == 201
+    pin_id = response.json()["id"]
+
+    # Vote on pin
+    vote_data = {"targetType": "pin", "targetId": pin_id}
+    response = client.post("/api/votes", json=vote_data, headers=headers)
+    assert response.status_code == 201
+    vote = response.json()
+    assert vote["targetType"] == "pin"
+    assert vote["targetId"] == pin_id
+    assert vote["userId"] == user_id
+
+    # Verify vote count in map-data
+    response = client.get("/api/map-data", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    voted_pin = next(p for p in data["pins"] if p["id"] == pin_id)
+    assert voted_pin["votes"] == 1
+    assert voted_pin["userVoted"] is True
+
+    # Duplicate vote should fail with 409
+    response = client.post("/api/votes", json=vote_data, headers=headers)
+    assert response.status_code == 409
+
+    # Another user should see userVoted=False
+    other_headers = {"X-User-Id": "other_user_vote"}
+    response = client.get("/api/map-data", headers=other_headers)
+    data = response.json()
+    voted_pin = next(p for p in data["pins"] if p["id"] == pin_id)
+    assert voted_pin["votes"] == 1
+    assert voted_pin["userVoted"] is False
+
+    # Unvote
+    response = client.delete(f"/api/votes/pin/{pin_id}", headers=headers)
+    assert response.status_code == 200
+
+    # Verify vote removed
+    response = client.get("/api/map-data", headers=headers)
+    data = response.json()
+    voted_pin = next(p for p in data["pins"] if p["id"] == pin_id)
+    assert voted_pin["votes"] == 0
+    assert voted_pin["userVoted"] is False
+
+def test_vote_on_area():
+    user_id = "test_user_area_vote"
+    headers = {"X-User-Id": user_id}
+
+    # Create an area
+    area_data = {
+        "latlngs": [[40.0, -3.0], [40.01, -3.0], [40.01, -2.99]],
+        "color": "blue",
+        "text": "Test Area",
+        "fontSize": "14px"
+    }
+    response = client.post("/api/areas", json=area_data, headers=headers)
+    assert response.status_code == 201
+    area_id = response.json()["id"]
+
+    # Vote
+    response = client.post("/api/votes", json={"targetType": "area", "targetId": area_id}, headers=headers)
+    assert response.status_code == 201
+
+    # Check map-data
+    response = client.get("/api/map-data", headers=headers)
+    data = response.json()
+    area = next(a for a in data["areas"] if a["id"] == area_id)
+    assert area["votes"] == 1
+    assert area["userVoted"] is True
+
+def test_vote_on_nonexistent_target():
+    headers = {"X-User-Id": "test_user_nonexist"}
+    response = client.post("/api/votes", json={"targetType": "pin", "targetId": 999999999}, headers=headers)
+    assert response.status_code == 404
+

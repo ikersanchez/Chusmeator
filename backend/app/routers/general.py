@@ -1,10 +1,11 @@
 """API router for general endpoints (user, map-data, search)."""
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy import func as sa_func
+from typing import List, Optional
 import httpx
 from app import schemas
-from app.models import PinModel, AreaModel, PixelModel
+from app.models import PinModel, AreaModel, PixelModel, VoteModel
 from app.database import get_db
 from app.dependencies import get_current_user_id
 from app.config import settings
@@ -18,9 +19,44 @@ def get_user_id(user_id: str = Depends(get_current_user_id)):
     return schemas.UserIdResponse(userId=user_id)
 
 
+def _get_vote_counts(db: Session, target_type: str):
+    """Get vote counts grouped by target_id for a given target_type."""
+    rows = (
+        db.query(VoteModel.target_id, sa_func.count(VoteModel.id))
+        .filter(VoteModel.target_type == target_type)
+        .group_by(VoteModel.target_id)
+        .all()
+    )
+    return {target_id: count for target_id, count in rows}
+
+
+def _get_user_votes(db: Session, target_type: str, user_id: Optional[str]):
+    """Get set of target_ids that a user has voted on."""
+    if not user_id:
+        return set()
+    rows = (
+        db.query(VoteModel.target_id)
+        .filter(VoteModel.target_type == target_type, VoteModel.user_id == user_id)
+        .all()
+    )
+    return {r[0] for r in rows}
+
+
 @router.get("/map-data", response_model=schemas.MapData)
-def get_map_data(db: Session = Depends(get_db)):
-    """Get all map data (pins, areas, and pixels)."""
+def get_map_data(
+    x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
+    db: Session = Depends(get_db),
+):
+    """Get all map data (pins, areas, and pixels) with vote counts."""
+    # Vote aggregations
+    pin_votes = _get_vote_counts(db, "pin")
+    area_votes = _get_vote_counts(db, "area")
+    pixel_votes = _get_vote_counts(db, "pixel")
+
+    pin_user_votes = _get_user_votes(db, "pin", x_user_id)
+    area_user_votes = _get_user_votes(db, "area", x_user_id)
+    pixel_user_votes = _get_user_votes(db, "pixel", x_user_id)
+
     # Get all pins
     pins = db.query(PinModel).all()
     pin_list = [
@@ -30,11 +66,13 @@ def get_map_data(db: Session = Depends(get_db)):
             lng=pin.lng,
             text=pin.text,
             userId=pin.user_id,
-            createdAt=pin.created_at
+            createdAt=pin.created_at,
+            votes=pin_votes.get(pin.id, 0),
+            userVoted=pin.id in pin_user_votes,
         )
         for pin in pins
     ]
-    
+
     # Get all areas
     areas = db.query(AreaModel).all()
     area_list = [
@@ -45,11 +83,13 @@ def get_map_data(db: Session = Depends(get_db)):
             text=area.text,
             fontSize=area.font_size,
             userId=area.user_id,
-            createdAt=area.created_at
+            createdAt=area.created_at,
+            votes=area_votes.get(area.id, 0),
+            userVoted=area.id in area_user_votes,
         )
         for area in areas
     ]
-    
+
     # Get all pixels
     pixels = db.query(PixelModel).all()
     pixel_list = [
@@ -61,11 +101,13 @@ def get_map_data(db: Session = Depends(get_db)):
             text=pixel.text,
             userId=pixel.user_id,
             createdAt=pixel.created_at,
-            updatedAt=pixel.updated_at
+            updatedAt=pixel.updated_at,
+            votes=pixel_votes.get(pixel.id, 0),
+            userVoted=pixel.id in pixel_user_votes,
         )
         for pixel in pixels
     ]
-    
+
     return schemas.MapData(pins=pin_list, areas=area_list, pixels=pixel_list)
 
 

@@ -5,9 +5,6 @@ import { api } from '../../../api/apiService';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import L from 'leaflet';
 
-// Fix for Leaflet draw icons
-// delete L.Icon.Default.prototype._getIconUrl;
-
 const AreaInteraction = ({ mode }) => {
     const [areas, setAreas] = useState([]);
     const [currentLayer, setCurrentLayer] = useState(null);
@@ -100,6 +97,32 @@ const AreaInteraction = ({ mode }) => {
         }
     };
 
+    const handleVote = async (area) => {
+        try {
+            if (area.userVoted) {
+                await api.unvote('area', area.id);
+                setAreas(areas.map(a =>
+                    a.id === area.id ? { ...a, votes: a.votes - 1, userVoted: false } : a
+                ));
+            } else {
+                await api.vote('area', area.id);
+                setAreas(areas.map(a =>
+                    a.id === area.id ? { ...a, votes: a.votes + 1, userVoted: true } : a
+                ));
+            }
+        } catch (error) {
+            console.error('Vote error:', error);
+        }
+    };
+
+    const getVoteFontSize = (area) => {
+        // Parse base font size and boost proportionally to votes
+        // displayFontSize = baseFontSize * (1 + min(votes, 50) * 0.02)
+        const basePx = parseFloat(area.fontSize) || 14;
+        const boost = 1 + Math.min(area.votes || 0, 50) * 0.02;
+        return basePx * boost + 'px';
+    };
+
     const ColorButton = ({ c, label }) => (
         <button
             type="button"
@@ -169,7 +192,7 @@ const AreaInteraction = ({ mode }) => {
                             fillOpacity: 0.4
                         }}
                     >
-                        {/* Modern text label without box */}
+                        {/* Modern text label without box — font scaled by votes */}
                         <Tooltip
                             permanent
                             direction="center"
@@ -179,19 +202,30 @@ const AreaInteraction = ({ mode }) => {
                             <div
                                 className="hoodmaps-label"
                                 style={{
-                                    fontSize: area.fontSize,
+                                    fontSize: getVoteFontSize(area),
                                 }}
                             >
                                 {area.text}
                             </div>
                         </Tooltip>
 
-                        {/* Popup for delete button */}
-                        {isOwner && (
-                            <Popup>
-                                <div>
-                                    <p><strong>{area.text}</strong></p>
-                                    <small>{new Date(area.createdAt).toLocaleDateString()}</small>
+                        {/* Popup with vote button + delete (for all users) */}
+                        <Popup>
+                            <div>
+                                <p><strong>{area.text}</strong></p>
+                                <small>{new Date(area.createdAt).toLocaleDateString()}</small>
+
+                                {/* Vote button */}
+                                <div style={{ marginTop: '8px' }}>
+                                    <button
+                                        onClick={() => handleVote(area)}
+                                        className={`vote-btn ${area.userVoted ? 'voted' : ''}`}
+                                    >
+                                        👍 {area.votes}
+                                    </button>
+                                </div>
+
+                                {isOwner && (
                                     <div style={{ marginTop: '8px' }}>
                                         <button
                                             onClick={() => handleDelete(area.id)}
@@ -208,9 +242,9 @@ const AreaInteraction = ({ mode }) => {
                                             🗑️ Delete
                                         </button>
                                     </div>
-                                </div>
-                            </Popup>
-                        )}
+                                )}
+                            </div>
+                        </Popup>
                     </Polygon>
                 );
             })}

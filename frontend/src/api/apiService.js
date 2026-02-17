@@ -124,4 +124,19 @@ export const api = {
         const results = await apiFetch(`/search?q=${encodeURIComponent(query)}`);
         return results;
     },
+
+    // Vote on a pin, area, or pixel
+    vote: async (targetType, targetId) => {
+        return apiFetch('/votes', {
+            method: 'POST',
+            body: JSON.stringify({ targetType, targetId }),
+        });
+    },
+
+    // Remove vote from a pin, area, or pixel
+    unvote: async (targetType, targetId) => {
+        return apiFetch(`/votes/${targetType}/${targetId}`, {
+            method: 'DELETE',
+        });
+    },
 };

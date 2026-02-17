@@ -20,6 +20,8 @@ class Pin(BaseModel):
     text: str
     userId: str
     createdAt: datetime
+    votes: int = 0
+    userVoted: bool = False
     
     class Config:
         from_attributes = True
@@ -43,6 +45,8 @@ class Area(BaseModel):
     fontSize: str
     userId: str
     createdAt: datetime
+    votes: int = 0
+    userVoted: bool = False
     
     class Config:
         from_attributes = True
@@ -75,6 +79,8 @@ class Pixel(BaseModel):
     userId: str
     createdAt: datetime
     updatedAt: Optional[datetime] = None
+    votes: int = 0
+    userVoted: bool = False
     
     class Config:
         from_attributes = True
@@ -113,3 +119,22 @@ class ErrorResponse(BaseModel):
 class SuccessResponse(BaseModel):
     """Schema for successful deletion."""
     success: bool = True
+
+
+# Vote Schemas
+class VoteCreate(BaseModel):
+    """Schema for creating a vote."""
+    targetType: str = Field(..., pattern="^(pin|area|pixel)$")
+    targetId: int
+
+
+class VoteResponse(BaseModel):
+    """Schema for a vote response."""
+    id: int
+    userId: str
+    targetType: str
+    targetId: int
+    createdAt: datetime
+
+    class Config:
+        from_attributes = True

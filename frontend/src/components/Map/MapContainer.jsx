@@ -29,25 +29,61 @@ L.Marker.prototype.options.icon = DefaultIcon;
 const SearchBox = () => {
     const map = useMap();
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState([]);
+    const [suggestions, setSuggestions] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
+    // Debounce function
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (query.length > 2) {
+                setIsSearching(true);
+                try {
+                    const results = await api.searchAddress(query);
+                    setSuggestions(results);
+                    setShowSuggestions(true);
+                } catch (err) {
+                    console.error("Search error:", err);
+                } finally {
+                    setIsSearching(false);
+                }
+            } else {
+                setSuggestions([]);
+                setShowSuggestions(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [query]);
+
+    const handleSelect = (result) => {
+        const { lat, lon, display_name } = result;
+        map.flyTo([lat, lon], 16);
+        setQuery(display_name); // Optional: keep technical name or clear? Keeping name is better UX
+        setSuggestions([]);
+        setShowSuggestions(false);
+    };
 
     const handleSearch = async (e) => {
         e.preventDefault();
         if (!query) return;
 
-        setIsSearching(true);
-        try {
-            const locations = await api.searchAddress(query);
-            if (locations.length > 0) {
-                const { lat, lon } = locations[0];
-                map.flyTo([lat, lon], 16);
-                setQuery('');
+        // Immediate search (if user presses Enter)
+        if (suggestions.length > 0) {
+            handleSelect(suggestions[0]);
+        } else {
+            // Fallback if no suggestions yet
+            setIsSearching(true);
+            try {
+                const locations = await api.searchAddress(query);
+                if (locations.length > 0) {
+                    handleSelect(locations[0]);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsSearching(false);
             }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsSearching(false);
         }
     };
 
@@ -57,40 +93,88 @@ const SearchBox = () => {
             top: '10px',
             left: '50px',
             zIndex: 1000,
-            background: 'white',
-            padding: '10px',
-            borderRadius: '8px',
-            boxShadow: 'var(--shadow-md)',
             display: 'flex',
-            gap: '8px'
+            flexDirection: 'column',
+            gap: '4px'
         }}>
-            <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search for an address..."
-                style={{
-                    padding: '8px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc',
-                    width: '200px'
-                }}
-            />
-            <button
-                onClick={handleSearch}
-                disabled={isSearching}
-                style={{
-                    padding: '8px 16px',
-                    background: 'var(--accent)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold'
-                }}
-            >
-                {isSearching ? '...' : 'Search'}
-            </button>
+            <div style={{
+                background: 'white',
+                padding: '10px',
+                borderRadius: '8px',
+                boxShadow: 'var(--shadow-md)',
+                display: 'flex',
+                gap: '8px'
+            }}>
+                <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                        // Delay blurring to allow click on suggestion
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                        placeholder="Search for an address..."
+                        style={{
+                            padding: '8px',
+                            borderRadius: '4px',
+                            border: '1px solid #ccc',
+                            width: '250px'
+                        }}
+                    />
+                    <button
+                        type="submit"
+                        disabled={isSearching}
+                        style={{
+                            padding: '8px 16px',
+                            background: 'var(--accent)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        {isSearching ? '...' : 'Search'}
+                    </button>
+                </form>
+            </div>
+
+            {showSuggestions && suggestions.length > 0 && (
+                <div style={{
+                    background: 'white',
+                    borderRadius: '8px',
+                    boxShadow: 'var(--shadow-lg)',
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    width: '100%',
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    zIndex: 2000
+                }}>
+                    {suggestions.map((result, index) => (
+                        <div
+                            key={index}
+                            onMouseDown={(e) => {
+                                e.preventDefault(); // Prevent input blur so click registers consistently
+                                handleSelect(result);
+                            }}
+                            style={{
+                                padding: '10px',
+                                borderBottom: index < suggestions.length - 1 ? '1px solid #eee' : 'none',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                color: 'var(--text)',
+                                transition: 'background 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                            onMouseLeave={(e) => e.target.style.background = 'white'}
+                        >
+                            {result.display_name}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

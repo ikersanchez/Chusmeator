@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Marker, Popup, useMapEvents } from 'react-leaflet';
+import { Marker, Popup, Tooltip, useMapEvents } from 'react-leaflet';
 import { api } from '../../../api/apiService';
+
+const VOTE_THRESHOLD_PERMANENT_LABEL = 5;
 
 const PinInteraction = ({ mode }) => {
     const [newPin, setNewPin] = useState(null);
@@ -58,20 +60,67 @@ const PinInteraction = ({ mode }) => {
         }
     };
 
+    const handleVote = async (pin) => {
+        try {
+            if (pin.userVoted) {
+                await api.unvote('pin', pin.id);
+                setPins(pins.map(p =>
+                    p.id === pin.id ? { ...p, votes: p.votes - 1, userVoted: false } : p
+                ));
+            } else {
+                await api.vote('pin', pin.id);
+                setPins(pins.map(p =>
+                    p.id === pin.id ? { ...p, votes: p.votes + 1, userVoted: true } : p
+                ));
+            }
+        } catch (error) {
+            console.error('Vote error:', error);
+        }
+    };
+
     return (
         <>
             {/* Existing saved pins */}
             {pins.map((pin) => {
                 const isOwner = pin.userId === currentUserId;
+                const showPermanentLabel = pin.votes >= VOTE_THRESHOLD_PERMANENT_LABEL;
 
                 return (
                     <Marker key={pin.id} position={[pin.lat, pin.lng]}>
+                        {/* Show permanent tooltip for highly-voted pins */}
+                        {showPermanentLabel && (
+                            <Tooltip
+                                permanent
+                                direction="top"
+                                offset={[0, -40]}
+                                className="modern-tooltip"
+                            >
+                                <div
+                                    className="hoodmaps-label"
+                                    style={{ fontSize: '12px' }}
+                                >
+                                    {pin.text}
+                                </div>
+                            </Tooltip>
+                        )}
+
                         <Popup className="premium-popup">
                             <div className="popup-content">
                                 <strong>Info:</strong> {pin.text} <br />
                                 <small style={{ color: '#666' }}>
                                     {new Date(pin.createdAt).toLocaleDateString()}
                                 </small>
+
+                                {/* Vote button */}
+                                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <button
+                                        onClick={() => handleVote(pin)}
+                                        className={`vote-btn ${pin.userVoted ? 'voted' : ''}`}
+                                    >
+                                        👍 {pin.votes}
+                                    </button>
+                                </div>
+
                                 {isOwner && (
                                     <div style={{ marginTop: '8px' }}>
                                         <button

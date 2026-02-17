@@ -1,8 +1,24 @@
-from sqlalchemy import Column, String, Float, Integer, BigInteger, Text, DateTime, ForeignKey, JSON, CheckConstraint
+from sqlalchemy import Column, String, Float, Integer, BigInteger, Text, DateTime, ForeignKey, JSON, CheckConstraint, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
+
+
+class VoteModel(Base):
+    """Vote model for community voting on pins, areas, and pixels."""
+    __tablename__ = "votes"
+
+    id = Column(BigInteger, primary_key=True)
+    user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
+    target_type = Column(String(10), nullable=False)  # "pin", "area", "pixel"
+    target_id = Column(BigInteger, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        CheckConstraint("target_type IN ('pin', 'area', 'pixel')", name="check_vote_target_type"),
+        UniqueConstraint("user_id", "target_type", "target_id", name="uq_vote"),
+    )
 
 
 class User(Base):

@@ -128,6 +128,24 @@ const PixelInteraction = ({ mode }) => {
         }
     };
 
+    const handleVote = async (pixel) => {
+        try {
+            if (pixel.userVoted) {
+                await api.unvote('pixel', pixel.id);
+                setPixels(pixels.map(p =>
+                    p.id === pixel.id ? { ...p, votes: p.votes - 1, userVoted: false } : p
+                ));
+            } else {
+                await api.vote('pixel', pixel.id);
+                setPixels(pixels.map(p =>
+                    p.id === pixel.id ? { ...p, votes: p.votes + 1, userVoted: true } : p
+                ));
+            }
+        } catch (error) {
+            console.error('Vote error:', error);
+        }
+    };
+
     const handleCancel = () => {
         setShowColorPicker(false);
         setSelectedCell(null);
@@ -141,6 +159,11 @@ const PixelInteraction = ({ mode }) => {
             case 'blue': return '#3b82f6';
             default: return '#3b82f6';
         }
+    };
+
+    const getVoteFillOpacity = (pixel) => {
+        // opacity = 0.6 + min(votes, 20) * 0.02, capping at 1.0
+        return Math.min(1.0, 0.6 + Math.min(pixel.votes || 0, 20) * 0.02);
     };
 
     // Only render when in PIXEL mode
@@ -188,7 +211,7 @@ const PixelInteraction = ({ mode }) => {
                             color: colorHex,
                             weight: 2,
                             fillColor: colorHex,
-                            fillOpacity: 0.6,
+                            fillOpacity: getVoteFillOpacity(pixel),
                         }}
                         eventHandlers={{
                             click: () => handleCellClick(pixel.lat, pixel.lng)
@@ -212,24 +235,36 @@ const PixelInteraction = ({ mode }) => {
                                 </div>
                             </Tooltip>
                         )}
-                        {isOwner && (
-                            <Popup>
-                                <div>
-                                    <p><strong>Your Pixel</strong></p>
-                                    {pixel.text && (
-                                        <p style={{ margin: '4px 0', fontWeight: 'bold' }}>
-                                            "{pixel.text}"
-                                        </p>
-                                    )}
-                                    <p style={{
-                                        color: colorHex,
-                                        fontWeight: 'bold',
-                                        textTransform: 'capitalize',
-                                        margin: '4px 0'
-                                    }}>
-                                        {pixel.color}
+                        {/* Popup with vote and delete for all users */}
+                        <Popup>
+                            <div>
+                                <p><strong>{isOwner ? 'Your Pixel' : 'Pixel'}</strong></p>
+                                {pixel.text && (
+                                    <p style={{ margin: '4px 0', fontWeight: 'bold' }}>
+                                        "{pixel.text}"
                                     </p>
-                                    <small>{new Date(pixel.createdAt).toLocaleDateString()}</small>
+                                )}
+                                <p style={{
+                                    color: colorHex,
+                                    fontWeight: 'bold',
+                                    textTransform: 'capitalize',
+                                    margin: '4px 0'
+                                }}>
+                                    {pixel.color}
+                                </p>
+                                <small>{new Date(pixel.createdAt).toLocaleDateString()}</small>
+
+                                {/* Vote button */}
+                                <div style={{ marginTop: '8px' }}>
+                                    <button
+                                        onClick={() => handleVote(pixel)}
+                                        className={`vote-btn ${pixel.userVoted ? 'voted' : ''}`}
+                                    >
+                                        👍 {pixel.votes}
+                                    </button>
+                                </div>
+
+                                {isOwner && (
                                     <div style={{ marginTop: '8px' }}>
                                         <button
                                             onClick={() => handleDelete(pixel.id)}
@@ -246,9 +281,9 @@ const PixelInteraction = ({ mode }) => {
                                             🗑️ Delete
                                         </button>
                                     </div>
-                                </div>
-                            </Popup>
-                        )}
+                                )}
+                            </div>
+                        </Popup>
                     </Rectangle>
                 );
             })}
