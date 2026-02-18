@@ -184,7 +184,12 @@ const ChusmeatorMap = () => {
     const [interactionMode, setInteractionMode] = useState('VIEW');
 
     return (
-        <MapContainer center={center} zoom={13} style={{ height: '100vh', width: '100%' }}>
+        <MapContainer
+            center={center}
+            zoom={13}
+            style={{ height: '100vh', width: '100%' }}
+            className={`map-mode-${interactionMode.toLowerCase()}`}
+        >
             <LayersControl position="topleft">
                 <LayersControl.BaseLayer checked name="OpenStreetMap">
                     <TileLayer

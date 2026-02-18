@@ -91,12 +91,12 @@ select {
   line-height: 1.1;
   pointer-events: none;
   /* Pseudo-outline using multiple text shadows */
-  text-shadow: 
-    -1.5px -1.5px 0 #000,  
-     1.5px -1.5px 0 #000,
-    -1.5px  1.5px 0 #000,
-     1.5px  1.5px 0 #000,
-     2px  2px 4px rgba(0,0,0,0.8) !important;
+  text-shadow:
+    -1.5px -1.5px 0 #000,
+    1.5px -1.5px 0 #000,
+    -1.5px 1.5px 0 #000,
+    1.5px 1.5px 0 #000,
+    2px 2px 4px rgba(0, 0, 0, 0.8) !important;
   white-space: pre-wrap;
   display: block;
 }
@@ -136,7 +136,35 @@ select {
 }
 
 @keyframes vote-pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Cursor Modes */
+.map-mode-pin {
+  cursor: crosshair !important;
+}
+
+.map-mode-area {
+  cursor: text !important;
+}
+
+.map-mode-pixel {
+  cursor: cell !important;
+}
+
+/* Ensure Leaflet's grab cursor doesn't override us */
+.map-mode-pin .leaflet-grab,
+.map-mode-area .leaflet-grab,
+.map-mode-pixel .leaflet-grab {
+  cursor: inherit !important;
 }

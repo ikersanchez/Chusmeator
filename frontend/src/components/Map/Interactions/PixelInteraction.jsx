@@ -321,7 +321,7 @@ const PixelInteraction = ({ mode }) => {
                             type="text"
                             value={textInput}
                             onChange={(e) => setTextInput(e.target.value)}
-                            placeholder="e.g., Tourist Trap, Best View, etc."
+                            placeholder="e.g. 'Chill spot', 'Loud area', 'Good vibes'"
                             maxLength={50}
                             autoFocus
                             style={{
@@ -337,6 +337,9 @@ const PixelInteraction = ({ mode }) => {
                             onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
                             onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                         />
+                        <div style={{ marginTop: '4px', fontSize: '0.75rem', color: '#666', textAlign: 'right' }}>
+                            More votes = <strong>Stronger</strong> color! 🌈
+                        </div>
                     </div>
 
                     {/* Color Selection */}

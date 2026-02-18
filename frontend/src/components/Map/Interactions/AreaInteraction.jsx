@@ -268,10 +268,15 @@ const AreaInteraction = ({ mode }) => {
                         <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500' }}>
                             Choose Color:
                         </label>
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-                            <ColorButton c="blue" label="Blue" />
-                            <ColorButton c="green" label="Green" />
-                            <ColorButton c="red" label="Red" />
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                                <ColorButton c="blue" label="Blue" />
+                                <ColorButton c="green" label="Green" />
+                                <ColorButton c="red" label="Red" />
+                            </div>
+                            <small style={{ fontSize: '0.75rem', color: '#666' }}>
+                                (Blue: Neutral, Green: Safe, Red: Busy/Danger)
+                            </small>
                         </div>
 
                         <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500' }}>
@@ -281,17 +286,20 @@ const AreaInteraction = ({ mode }) => {
                             type="text"
                             value={text}
                             onChange={e => setText(e.target.value)}
-                            placeholder="Enter area name or description"
+                            placeholder="e.g. 'Hipster Main St', 'Tourist Trap', 'Quiet Zone'"
                             style={{
                                 width: '100%',
                                 padding: '10px',
-                                marginBottom: '16px',
+                                marginBottom: '4px',
                                 borderRadius: '6px',
                                 border: '1px solid #ccc',
                                 fontSize: '0.95rem'
                             }}
                             autoFocus
                         />
+                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '16px', textAlign: 'right' }}>
+                            More votes = <strong>BIGGER</strong> text! 📈
+                        </div>
 
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button

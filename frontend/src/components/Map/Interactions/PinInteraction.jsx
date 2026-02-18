@@ -155,11 +155,11 @@ const PinInteraction = ({ mode }) => {
                                 <textarea
                                     value={formData}
                                     onChange={(e) => setFormData(e.target.value)}
-                                    placeholder="Enter details here..."
+                                    placeholder="e.g. 'Best Coffee', 'Pickpockets here', 'Hidden Gem'"
                                     style={{
                                         width: '100%',
                                         padding: '8px',
-                                        marginBottom: '8px',
+                                        marginBottom: '4px',
                                         borderRadius: '4px',
                                         border: '1px solid #ccc',
                                         resize: 'vertical',
@@ -167,6 +167,9 @@ const PinInteraction = ({ mode }) => {
                                     }}
                                     autoFocus
                                 />
+                                <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '8px', textAlign: 'right' }}>
+                                    Get <strong>5 votes</strong> to make it permanent! 🚀
+                                </div>
                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                     <button
                                         type="button"
