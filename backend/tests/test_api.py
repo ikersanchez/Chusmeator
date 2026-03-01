@@ -151,3 +151,81 @@ def test_vote_on_nonexistent_target():
     response = client.post("/api/votes", json={"targetType": "pin", "targetId": 999999999}, headers=headers)
     assert response.status_code == 404
 
+def test_vote_on_area_new():
+    """Test voting on an area."""
+    user_id = "test_user_area_vote_new"
+    headers = {"X-User-Id": user_id}
+    # Create an area first
+    area_data = {
+        "latlngs": [{"lat": 40.7, "lng": -74.0}],
+        "color": "green",
+        "text": "Voting Area",
+        "fontSize": "large"
+    }
+    area_resp = client.post("/api/areas", json=area_data, headers=headers)
+    area_id = area_resp.json()["id"]
+
+    # Vote on the area
+    vote_data = {
+        "targetType": "area",
+        "targetId": area_id
+    }
+    resp = client.post("/api/votes", json=vote_data, headers=headers)
+    assert resp.status_code == 201
+    
+    # Check that map data reflects the vote
+    map_resp = client.get("/api/map-data", headers=headers)
+    area = next(a for a in map_resp.json()["areas"] if a["id"] == area_id)
+    assert area["votes"] == 1
+    assert area["userVoted"] is True
+
+
+def test_pin_comments():
+    """Test creating and getting comments for a pin."""
+    user_id = "test_user_comments"
+    headers = {"X-User-Id": user_id}
+    # Create a pin first
+    pin_data = {
+        "lat": 40.0,
+        "lng": -70.0,
+        "text": "Pin for comments",
+        "color": "blue"
+    }
+    pin_resp = client.post("/api/pins", json=pin_data, headers=headers)
+    assert pin_resp.status_code == 201
+    pin_id = pin_resp.json()["id"]
+
+    # Add a comment
+    comment_data = {"text": "This is a great pin!"}
+    resp = client.post(f"/api/pins/{pin_id}/comments", json=comment_data, headers=headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["text"] == comment_data["text"]
+    assert data["pinId"] == pin_id
+    
+    # Get comments
+    get_resp = client.get(f"/api/pins/{pin_id}/comments", headers=headers)
+    assert get_resp.status_code == 200
+    comments_list = get_resp.json()
+    assert len(comments_list) == 1
+    assert comments_list[0]["text"] == "This is a great pin!"
+
+def test_pin_comment_validation():
+    """Test that comment text cannot exceed 100 characters."""
+    user_id = "test_user_comment_validation"
+    headers = {"X-User-Id": user_id}
+    # Create a pin
+    pin_data = {
+        "lat": 40.0,
+        "lng": -70.0,
+        "text": "Pin for validation",
+        "color": "blue"
+    }
+    pin_resp = client.post("/api/pins", json=pin_data, headers=headers)
+    pin_id = pin_resp.json()["id"]
+
+    # Add comment with >100 characters
+    long_text = "a" * 101
+    comment_data = {"text": long_text}
+    resp = client.post(f"/api/pins/{pin_id}/comments", json=comment_data, headers=headers)
+    assert resp.status_code == 422  # Unprocessable Entity (validation error)

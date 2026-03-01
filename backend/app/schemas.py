@@ -106,3 +106,21 @@ class VoteResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Comment Schemas
+class CommentCreate(BaseModel):
+    """Schema for creating a comment on a pin."""
+    text: str = Field(..., max_length=100, description="Comment text (max 100 characters)")
+
+
+class Comment(BaseModel):
+    """Schema for a comment response."""
+    id: int
+    pinId: int
+    userId: str
+    text: str
+    createdAt: datetime
+
+    class Config:
+        from_attributes = True

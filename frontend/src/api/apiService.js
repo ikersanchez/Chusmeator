@@ -112,4 +112,17 @@ export const api = {
             method: 'DELETE',
         });
     },
+
+    // Get comments for a pin
+    getPinComments: async (pinId) => {
+        return apiFetch(`/pins/${pinId}/comments`);
+    },
+
+    // Add a comment to a pin
+    addPinComment: async (pinId, text) => {
+        return apiFetch(`/pins/${pinId}/comments`, {
+            method: 'POST',
+            body: JSON.stringify({ text }),
+        });
+    },
 };

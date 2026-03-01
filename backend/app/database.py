@@ -35,8 +35,21 @@ def init_db():
         except Exception as e:
             print(f"Migration error: {e}")
 
+        # Also apply SQLite lightweight checks if necessary
+        try:
+            # Check if comments table exists
+            check_comments_sql = text("SELECT name FROM sqlite_master WHERE type='table' AND name='comments';")
+            result = conn.execute(check_comments_sql).fetchone()
+            if not result:
+                # SQLAlchemy's create_all will handle it if it doesn't exist, we don't strictly need a raw SQL alter here.
+                # However we can just let Base.metadata.create_all(bind=engine) take care of new tables.
+                pass
+        except Exception as e:
+            pass
+
 
 def get_db():
+
     """Dependency to get database session."""
     db = SessionLocal()
     try:
