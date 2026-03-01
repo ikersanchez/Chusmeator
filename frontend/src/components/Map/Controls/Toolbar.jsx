@@ -9,7 +9,7 @@ const Toolbar = ({ mode, onModeChange }) => {
         { id: 'VIEW', label: '👁️ View', icon: '👁️', description: 'Navigate the map' },
         { id: 'PIN', label: '📍 Add Pin', icon: '📍', description: 'Click to add a pin' },
         { id: 'AREA', label: '🗺️ Draw Area', icon: '🗺️', description: 'Draw an area on the map' },
-        { id: 'PIXEL', label: '🎨 Pixel Mode', icon: '🎨', description: 'Color grid squares' },
+
     ];
 
     return (

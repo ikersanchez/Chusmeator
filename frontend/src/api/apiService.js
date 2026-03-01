@@ -56,7 +56,7 @@ export const api = {
         return getUserId();
     },
 
-    // Get all map data (pins, areas, pixels)
+    // Get all map data (pins, areas)
     getMapData: async () => {
         return apiFetch('/map-data');
     },
@@ -91,33 +91,6 @@ export const api = {
         });
     },
 
-    // Get all pixels
-    getPixels: async () => {
-        return apiFetch('/pixels');
-    },
-
-    // Save a new pixel
-    savePixel: async (pixel) => {
-        return apiFetch('/pixels', {
-            method: 'POST',
-            body: JSON.stringify(pixel),
-        });
-    },
-
-    // Update an existing pixel
-    updatePixel: async (pixelId, updates) => {
-        return apiFetch(`/pixels/${pixelId}`, {
-            method: 'PUT',
-            body: JSON.stringify(updates),
-        });
-    },
-
-    // Delete a pixel
-    deletePixel: async (pixelId) => {
-        return apiFetch(`/pixels/${pixelId}`, {
-            method: 'DELETE',
-        });
-    },
 
     // Search address through our backend proxy
     searchAddress: async (query) => {
@@ -125,7 +98,7 @@ export const api = {
         return results;
     },
 
-    // Vote on a pin, area, or pixel
+    // Vote on a pin or area
     vote: async (targetType, targetId) => {
         return apiFetch('/votes', {
             method: 'POST',
@@ -133,7 +106,7 @@ export const api = {
         });
     },
 
-    // Remove vote from a pin, area, or pixel
+    // Remove vote from a pin or area
     unvote: async (targetType, targetId) => {
         return apiFetch(`/votes/${targetType}/${targetId}`, {
             method: 'DELETE',

@@ -18,11 +18,12 @@ def test_pin_crud_flow(client):
     headers = {"X-User-Id": "pin_user"}
     
     # 1. Create
-    payload = {"lat": 40.4168, "lng": -3.7038, "text": "Plaza Mayor"}
+    payload = {"lat": 40.4168, "lng": -3.7038, "text": "Plaza Mayor", "color": "green"}
     response = client.post("/api/pins", json=payload, headers=headers)
     assert response.status_code == 201
     pin = response.json()
     assert pin["text"] == "Plaza Mayor"
+    assert pin["color"] == "green"
     pin_id = pin["id"]
 
     # 2. Read (via map-data)
@@ -60,26 +61,7 @@ def test_area_crud_flow(client):
     response = client.delete(f"/api/areas/{area_id}", headers=headers)
     assert response.status_code == 200
 
-def test_pixel_crud_flow(client):
-    """Full CRUD lifecycle for Pixels."""
-    headers = {"X-User-Id": "pixel_user"}
-    
-    # 1. Create
-    payload = {"lat": 40.42, "lng": -3.70, "color": "red", "text": "Tourist Hub"}
-    response = client.post("/api/pixels", json=payload, headers=headers)
-    assert response.status_code == 201
-    pixel = response.json()
-    pixel_id = pixel["id"]
 
-    # 2. Update
-    update_payload = {"color": "green", "text": "Updated Hub"}
-    response = client.put(f"/api/pixels/{pixel_id}", json=update_payload, headers=headers)
-    assert response.status_code == 200
-    assert response.json()["color"] == "green"
-
-    # 3. Delete
-    response = client.delete(f"/api/pixels/{pixel_id}", headers=headers)
-    assert response.status_code == 200
 
 def test_search_proxy(client):
     """Verify the search proxy endpoint (mocking httpx might be needed for CI, but let's test the interface)."""

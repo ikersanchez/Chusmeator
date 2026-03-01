@@ -11,12 +11,12 @@ class VoteModel(Base):
 
     id = Column(BigInteger, primary_key=True)
     user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
-    target_type = Column(String(10), nullable=False)  # "pin", "area", "pixel"
+    target_type = Column(String(10), nullable=False)  # "pin", "area"
     target_id = Column(BigInteger, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        CheckConstraint("target_type IN ('pin', 'area', 'pixel')", name="check_vote_target_type"),
+        CheckConstraint("target_type IN ('pin', 'area')", name="check_vote_target_type"),
         UniqueConstraint("user_id", "target_type", "target_id", name="uq_vote"),
     )
 
@@ -37,8 +37,13 @@ class PinModel(Base):
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
     text = Column(Text, nullable=False)
+    color = Column(String(10), nullable=False, default='blue')
     user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        CheckConstraint("color IN ('blue', 'green', 'red')", name="check_pin_color"),
+    )
 
 
 class AreaModel(Base):
@@ -57,20 +62,3 @@ class AreaModel(Base):
         CheckConstraint("color IN ('blue', 'green', 'red')", name="check_area_color"),
     )
 
-
-class PixelModel(Base):
-    """Pixel model for grid-based colored cells."""
-    __tablename__ = "pixels"
-    
-    id = Column(BigInteger, primary_key=True)
-    lat = Column(Float, nullable=False)
-    lng = Column(Float, nullable=False)
-    color = Column(String(10), nullable=False)
-    text = Column(Text, nullable=False)
-    user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    __table_args__ = (
-        CheckConstraint("color IN ('red', 'green', 'blue')", name="check_pixel_color"),
-    )

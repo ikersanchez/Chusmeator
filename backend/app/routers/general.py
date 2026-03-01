@@ -5,7 +5,7 @@ from sqlalchemy import func as sa_func
 from typing import List, Optional
 import httpx
 from app import schemas
-from app.models import PinModel, AreaModel, PixelModel, VoteModel
+from app.models import PinModel, AreaModel, VoteModel
 from app.database import get_db
 from app.dependencies import get_current_user_id
 from app.config import settings
@@ -47,15 +47,12 @@ def get_map_data(
     x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
     db: Session = Depends(get_db),
 ):
-    """Get all map data (pins, areas, and pixels) with vote counts."""
+    """Get all map data (pins and areas) with vote counts."""
     # Vote aggregations
     pin_votes = _get_vote_counts(db, "pin")
     area_votes = _get_vote_counts(db, "area")
-    pixel_votes = _get_vote_counts(db, "pixel")
-
     pin_user_votes = _get_user_votes(db, "pin", x_user_id)
     area_user_votes = _get_user_votes(db, "area", x_user_id)
-    pixel_user_votes = _get_user_votes(db, "pixel", x_user_id)
 
     # Get all pins
     pins = db.query(PinModel).all()
@@ -65,6 +62,7 @@ def get_map_data(
             lat=pin.lat,
             lng=pin.lng,
             text=pin.text,
+            color=pin.color,
             userId=pin.user_id,
             createdAt=pin.created_at,
             votes=pin_votes.get(pin.id, 0),
@@ -90,25 +88,7 @@ def get_map_data(
         for area in areas
     ]
 
-    # Get all pixels
-    pixels = db.query(PixelModel).all()
-    pixel_list = [
-        schemas.Pixel(
-            id=pixel.id,
-            lat=pixel.lat,
-            lng=pixel.lng,
-            color=pixel.color,
-            text=pixel.text,
-            userId=pixel.user_id,
-            createdAt=pixel.created_at,
-            updatedAt=pixel.updated_at,
-            votes=pixel_votes.get(pixel.id, 0),
-            userVoted=pixel.id in pixel_user_votes,
-        )
-        for pixel in pixels
-    ]
-
-    return schemas.MapData(pins=pin_list, areas=area_list, pixels=pixel_list)
+    return schemas.MapData(pins=pin_list, areas=area_list)
 
 
 @router.get("/search", response_model=List[schemas.SearchResult])

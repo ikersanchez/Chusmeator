@@ -26,6 +26,7 @@ def create_pin(
         lat=pin_data.lat,
         lng=pin_data.lng,
         text=pin_data.text,
+        color=pin_data.color,
         user_id=user_id
     )
     
@@ -39,6 +40,7 @@ def create_pin(
         lat=db_pin.lat,
         lng=db_pin.lng,
         text=db_pin.text,
+        color=db_pin.color,
         userId=db_pin.user_id,
         createdAt=db_pin.created_at
     )

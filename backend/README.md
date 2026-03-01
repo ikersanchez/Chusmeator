@@ -15,7 +15,7 @@ FastAPI backend for the Chusmeator interactive map application.
 
 ### General
 - `GET /api/user` - Get current user ID
-- `GET /api/map-data` - Get all pins, areas, and pixels
+- `GET /api/map-data` - Get all pins and areas
 - `GET /api/search?q={query}` - Search for addresses
 
 ### Pins
@@ -25,12 +25,6 @@ FastAPI backend for the Chusmeator interactive map application.
 ### Areas
 - `POST /api/areas` - Create a new area
 - `DELETE /api/areas/{areaId}` - Delete an area (owner only)
-
-### Pixels
-- `GET /api/pixels` - Get all pixels
-- `POST /api/pixels` - Create a new pixel
-- `PUT /api/pixels/{pixelId}` - Update a pixel (owner only)
-- `DELETE /api/pixels/{pixelId}` - Delete a pixel (owner only)
 
 ## Setup
 

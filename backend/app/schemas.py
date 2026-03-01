@@ -10,6 +10,7 @@ class PinCreate(BaseModel):
     lat: float = Field(..., description="Latitude coordinate")
     lng: float = Field(..., description="Longitude coordinate")
     text: str = Field(..., description="Pin description text")
+    color: str = Field("blue", pattern="^(blue|green|red)$")
 
 
 class Pin(BaseModel):
@@ -18,6 +19,7 @@ class Pin(BaseModel):
     lat: float
     lng: float
     text: str
+    color: str
     userId: str
     createdAt: datetime
     votes: int = 0
@@ -52,46 +54,12 @@ class Area(BaseModel):
         from_attributes = True
 
 
-# Pixel Schemas
-class PixelCreate(BaseModel):
-    """Schema for creating a new pixel."""
-    lat: float
-    lng: float
-    color: str = Field(..., pattern="^(red|green|blue)$")
-    text: str
-
-
-class PixelUpdate(BaseModel):
-    """Schema for updating a pixel."""
-    lat: Optional[float] = None
-    lng: Optional[float] = None
-    color: Optional[str] = Field(None, pattern="^(red|green|blue)$")
-    text: Optional[str] = None
-
-
-class Pixel(BaseModel):
-    """Schema for a pixel response."""
-    id: int
-    lat: float
-    lng: float
-    color: str
-    text: str
-    userId: str
-    createdAt: datetime
-    updatedAt: Optional[datetime] = None
-    votes: int = 0
-    userVoted: bool = False
-    
-    class Config:
-        from_attributes = True
-
-
 # Map Data Schema
 class MapData(BaseModel):
     """Schema for all map data."""
     pins: List[Pin]
     areas: List[Area]
-    pixels: List[Pixel]
+
 
 
 # User Schema
@@ -124,7 +92,7 @@ class SuccessResponse(BaseModel):
 # Vote Schemas
 class VoteCreate(BaseModel):
     """Schema for creating a vote."""
-    targetType: str = Field(..., pattern="^(pin|area|pixel)$")
+    targetType: str = Field(..., pattern="^(pin|area)$")
     targetId: int
 
 

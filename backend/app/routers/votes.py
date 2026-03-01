@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 from app import schemas
-from app.models import VoteModel, PinModel, AreaModel, PixelModel
+from app.models import VoteModel, PinModel, AreaModel
 from app.database import get_db
 from app.dependencies import ensure_user_exists
 
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api", tags=["Votes"])
 TARGET_MODELS = {
     "pin": PinModel,
     "area": AreaModel,
-    "pixel": PixelModel,
+
 }
 
 

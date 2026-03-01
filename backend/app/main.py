@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_db
-from app.routers import pins, areas, pixels, general, votes
+from app.routers import pins, areas, general, votes
 
 # Create FastAPI app
 app = FastAPI(
@@ -26,7 +26,7 @@ app.add_middleware(
 app.include_router(general.router)
 app.include_router(pins.router)
 app.include_router(areas.router)
-app.include_router(pixels.router)
+
 app.include_router(votes.router)
 
 

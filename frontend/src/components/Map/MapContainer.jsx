@@ -10,7 +10,7 @@ import Toolbar from './Controls/Toolbar';
 // Interactions
 import PinInteraction from './Interactions/PinInteraction';
 import AreaInteraction from './Interactions/AreaInteraction';
-import PixelInteraction from './Interactions/PixelInteraction';
+
 
 // Fix for default marker icon in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -210,7 +210,7 @@ const ChusmeatorMap = () => {
 
             <PinInteraction mode={interactionMode} />
             <AreaInteraction mode={interactionMode} />
-            <PixelInteraction mode={interactionMode} />
+
         </MapContainer>
     );
 };

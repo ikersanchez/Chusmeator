@@ -21,7 +21,7 @@ def create_area(
     """Create a new area."""
     try:
         print(f"DEBUG: Creating area for user {user_id}: {area_data.text}")
-        # Generate ID from timestamp (microsecond resolution like pixels)
+        # Generate ID from timestamp (microsecond resolution)
         area_id = int(datetime.now().timestamp() * 1000000)
         
         db_area = AreaModel(

@@ -84,7 +84,7 @@ const HelpModal = ({ onClose }) => {
                     <ul style={{ color: '#6b7280', fontSize: '0.95rem', paddingLeft: '20px', lineHeight: '1.5' }}>
                         <li style={{ marginBottom: '5px' }}><strong>Pins:</strong> Reach <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>5 votes</span> to make the label permanently visible on the map!</li>
                         <li style={{ marginBottom: '5px' }}><strong>Areas:</strong> More votes = <strong>BIGGER</strong> text size.</li>
-                        <li style={{ marginBottom: '5px' }}><strong>Pixels:</strong> More votes = <strong>Vibrant</strong> colors (higher opacity).</li>
+
                     </ul>
                 </div>
 

@@ -158,13 +158,16 @@ select {
   cursor: text !important;
 }
 
-.map-mode-pixel {
-  cursor: cell !important;
-}
+
 
 /* Ensure Leaflet's grab cursor doesn't override us */
 .map-mode-pin .leaflet-grab,
-.map-mode-area .leaflet-grab,
-.map-mode-pixel .leaflet-grab {
+.map-mode-area .leaflet-grab {
   cursor: inherit !important;
+}
+
+/* Custom SVG Pin Icon */
+.custom-pin-icon {
+  background: transparent;
+  border: none;
 }

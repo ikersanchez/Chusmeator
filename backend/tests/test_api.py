@@ -43,11 +43,12 @@ def test_pin_crud():
     headers = {"X-User-Id": user_id}
     
     # Create pin
-    pin_data = {"lat": 40.0, "lng": -3.0, "text": "Test Pin"}
+    pin_data = {"lat": 40.0, "lng": -3.0, "text": "Test Pin", "color": "red"}
     response = client.post("/api/pins", json=pin_data, headers=headers)
     assert response.status_code == 201
     pin = response.json()
     assert pin["text"] == "Test Pin"
+    assert pin["color"] == "red"
     assert pin["userId"] == user_id
     pin_id = pin["id"]
     
@@ -67,28 +68,7 @@ def test_pin_crud():
     assert response.status_code == 200
     assert response.json() == {"success": True}
 
-def test_pixel_crud():
-    user_id = "test_user_pixel"
-    headers = {"X-User-Id": user_id}
-    
-    # Create pixel
-    pixel_data = {"lat": 40.1, "lng": -3.1, "color": "red", "text": "Test Pixel"}
-    response = client.post("/api/pixels", json=pixel_data, headers=headers)
-    assert response.status_code == 201
-    pixel = response.json()
-    pixel_id = pixel["id"]
-    
-    # Update pixel
-    update_data = {"color": "green", "text": "Updated"}
-    response = client.put(f"/api/pixels/{pixel_id}", json=update_data, headers=headers)
-    assert response.status_code == 200
-    updated = response.json()
-    assert updated["color"] == "green"
-    assert updated["text"] == "Updated"
-    
-    # Delete pixel
-    response = client.delete(f"/api/pixels/{pixel_id}", headers=headers)
-    assert response.status_code == 200
+
 
 def test_vote_on_pin():
     user_id = "test_user_vote"

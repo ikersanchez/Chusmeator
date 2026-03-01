@@ -21,6 +21,19 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def init_db():
     """Initialize database tables."""
     Base.metadata.create_all(bind=engine)
+    
+    # Run a lightweight manual migration to add the new color column if it doesn't exist
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        try:
+            # Postgres query to check if column exists
+            check_sql = text("SELECT column_name FROM information_schema.columns WHERE table_name='pins' AND column_name='color';")
+            result = conn.execute(check_sql).fetchone()
+            if not result:
+                conn.execute(text("ALTER TABLE pins ADD COLUMN color VARCHAR(10) NOT NULL DEFAULT 'blue';"))
+                print("Migration: Added 'color' column to 'pins' table.")
+        except Exception as e:
+            print(f"Migration error: {e}")
 
 
 def get_db():
