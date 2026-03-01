@@ -62,3 +62,13 @@ class AreaModel(Base):
         CheckConstraint("color IN ('blue', 'green', 'red')", name="check_area_color"),
     )
 
+
+class CommentModel(Base):
+    """Comment model for pins."""
+    __tablename__ = "comments"
+
+    id = Column(BigInteger, primary_key=True)
+    pin_id = Column(BigInteger, ForeignKey("pins.id"), nullable=False)
+    user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
+    text = Column(String(100), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
