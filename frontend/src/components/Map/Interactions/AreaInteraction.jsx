@@ -21,7 +21,8 @@ const AreaInteraction = ({ mode }) => {
         const loadData = async () => {
             const data = await api.getMapData();
             setAreas(data.areas || []);
-            setCurrentUserId(api.getUserId());
+            const userId = await api.getUserId();
+            setCurrentUserId(userId);
         };
         loadData();
     }, []);
@@ -200,7 +201,7 @@ const AreaInteraction = ({ mode }) => {
                             offset={[0, 0]}
                         >
                             <div
-                                className="hoodmaps-label"
+                                className="map-label-style"
                                 style={{
                                     fontSize: getVoteFontSize(area),
                                 }}
@@ -287,6 +288,7 @@ const AreaInteraction = ({ mode }) => {
                             value={text}
                             onChange={e => setText(e.target.value)}
                             placeholder="e.g. 'Hipster Main St', 'Tourist Trap', 'Quiet Zone'"
+                            maxLength={100}
                             style={{
                                 width: '100%',
                                 padding: '10px',

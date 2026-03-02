@@ -1,7 +1,18 @@
 """Pydantic schemas matching the OpenAPI specification."""
 from typing import List, Optional, Any
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from pydantic.alias_generators import to_camel
+from app.models import PinColor
+
+
+class BaseSchema(BaseModel):
+    """Base schema with camelCase configuration."""
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True
+    )
 
 
 # Pin Schemas
@@ -9,63 +20,56 @@ class PinCreate(BaseModel):
     """Schema for creating a new pin."""
     lat: float = Field(..., description="Latitude coordinate")
     lng: float = Field(..., description="Longitude coordinate")
-    text: str = Field(..., description="Pin description text")
-    color: str = Field("blue", pattern="^(blue|green|red)$")
+    text: str = Field(..., max_length=100, description="Pin description text")
+    color: PinColor = PinColor.BLUE
 
 
-class Pin(BaseModel):
+class Pin(BaseSchema):
     """Schema for a pin response."""
     id: int
     lat: float
     lng: float
     text: str
     color: str
-    userId: str
-    createdAt: datetime
+    user_id: str
+    created_at: datetime
     votes: int = 0
-    userVoted: bool = False
-    
-    class Config:
-        from_attributes = True
+    user_voted: bool = False
 
 
 # Area Schemas
-class AreaCreate(BaseModel):
+class AreaCreate(BaseSchema):
     """Schema for creating a new area."""
     latlngs: List[Any]  # Flexible for different Leaflet structures
-    color: str = Field(..., pattern="^(blue|green|red)$")
-    text: str
-    fontSize: str
+    color: PinColor
+    text: str = Field(..., max_length=100)
+    font_size: str
 
 
-class Area(BaseModel):
+class Area(BaseSchema):
     """Schema for an area response."""
     id: int
     latlngs: List[Any]
     color: str
     text: str
-    fontSize: str
-    userId: str
-    createdAt: datetime
+    font_size: str
+    user_id: str
+    created_at: datetime
     votes: int = 0
-    userVoted: bool = False
-    
-    class Config:
-        from_attributes = True
+    user_voted: bool = False
 
 
 # Map Data Schema
-class MapData(BaseModel):
+class MapData(BaseSchema):
     """Schema for all map data."""
     pins: List[Pin]
     areas: List[Area]
 
 
-
 # User Schema
-class UserIdResponse(BaseModel):
+class UserIdResponse(BaseSchema):
     """Schema for user ID response."""
-    userId: str
+    user_id: str
 
 
 # Search Schemas
@@ -90,22 +94,19 @@ class SuccessResponse(BaseModel):
 
 
 # Vote Schemas
-class VoteCreate(BaseModel):
+class VoteCreate(BaseSchema):
     """Schema for creating a vote."""
-    targetType: str = Field(..., pattern="^(pin|area)$")
-    targetId: int
+    target_type: str = Field(..., pattern="^(pin|area)$")
+    target_id: int
 
 
-class VoteResponse(BaseModel):
+class VoteResponse(BaseSchema):
     """Schema for a vote response."""
     id: int
-    userId: str
-    targetType: str
-    targetId: int
-    createdAt: datetime
-
-    class Config:
-        from_attributes = True
+    user_id: str
+    target_type: str
+    target_id: int
+    created_at: datetime
 
 
 # Comment Schemas
@@ -114,13 +115,10 @@ class CommentCreate(BaseModel):
     text: str = Field(..., max_length=100, description="Comment text (max 100 characters)")
 
 
-class Comment(BaseModel):
+class Comment(BaseSchema):
     """Schema for a comment response."""
     id: int
-    pinId: int
-    userId: str
+    pin_id: int
+    user_id: str
     text: str
-    createdAt: datetime
-
-    class Config:
-        from_attributes = True
+    created_at: datetime

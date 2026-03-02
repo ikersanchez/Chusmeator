@@ -9,6 +9,11 @@ class Settings(BaseSettings):
     api_port: int = 8000
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     nominatim_url: str = "https://nominatim.openstreetmap.org"
+    # Secret key required in X-Admin-Key header to access /api/admin/* endpoints
+    admin_key: str = ""
+    # Secret key for session signing (change in production!)
+    secret_key: str = "dev-secret-key-change-me-12345"
+    session_cookie_name: str = "chusmeator_session"
     
     class Config:
         env_file = ".env"
@@ -16,3 +21,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+

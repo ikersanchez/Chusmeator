@@ -49,7 +49,8 @@ const PinInteraction = ({ mode }) => {
         const loadData = async () => {
             const data = await api.getMapData();
             setPins(data.pins || []);
-            setCurrentUserId(api.getUserId());
+            const userId = await api.getUserId();
+            setCurrentUserId(userId);
         };
         loadData();
     }, []);
@@ -176,7 +177,7 @@ const PinInteraction = ({ mode }) => {
                                 className="modern-tooltip"
                             >
                                 <div
-                                    className="hoodmaps-label"
+                                    className="map-label-style"
                                     style={{ fontSize: '12px' }}
                                 >
                                     {pin.text}
@@ -309,6 +310,7 @@ const PinInteraction = ({ mode }) => {
                                     value={formData}
                                     onChange={(e) => setFormData(e.target.value)}
                                     placeholder="e.g. 'Best Coffee', 'Pickpockets here', 'Hidden Gem'"
+                                    maxLength={100}
                                     style={{
                                         width: '100%',
                                         padding: '8px',

@@ -1,27 +1,15 @@
-const API_BASE_URL = '/api';
-const USER_ID_KEY = 'chusmeator_user_id';
+const API_BASE_URL = import.meta.env?.VITE_API_URL || '/api';
 
-// Helper to get or generate user ID
-const getUserId = () => {
-    let userId = localStorage.getItem(USER_ID_KEY);
-    if (!userId) {
-        // Generate a simple random ID
-        userId = 'user_' + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem(USER_ID_KEY, userId);
-    }
-    return userId;
-};
-
-// Helper for API calls with X-User-Id header
+// Helper for API calls with session cookies
 const apiFetch = async (endpoint, options = {}) => {
-    const userId = getUserId();
     const headers = {
         'Content-Type': 'application/json',
-        'X-User-Id': userId,
         ...(options.headers || {}),
     };
 
-    console.log(`API [${options.method || 'GET'}] ${endpoint}`, options.body ? JSON.parse(options.body) : '');
+    if (import.meta.env?.DEV) {
+        console.log(`API [${options.method || 'GET'}] ${endpoint}`, options.body ? JSON.parse(options.body) : '');
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -31,29 +19,31 @@ const apiFetch = async (endpoint, options = {}) => {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const msg = errorData.error || `API error: ${response.status}`;
+            const msg = errorData.error || errorData.detail || `API error: ${response.status}`;
             console.error(`API Error: ${msg}`, errorData);
-            alert(msg);
+            // In a real app, we would push this to a notification state/context
+            // For now, we'll just throw and let the component handle it or log it
             throw new Error(msg);
         }
 
         if (response.status === 204) return null;
         const data = await response.json();
-        console.log(`API Success [${endpoint}]`, data);
+
+        if (import.meta.env?.DEV) {
+            console.log(`API Success [${endpoint}]`, data);
+        }
         return data;
     } catch (error) {
         console.error(`Fetch error [${endpoint}]:`, error);
-        if (!error.message.includes('API error')) {
-            alert(`Connection error: ${error.message}`);
-        }
         throw error;
     }
 };
 
 export const api = {
     // Get current user ID
-    getUserId: () => {
-        return getUserId();
+    getUserId: async () => {
+        const data = await apiFetch('/user');
+        return data.userId;
     },
 
     // Get all map data (pins, areas)

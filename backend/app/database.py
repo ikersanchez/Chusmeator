@@ -3,6 +3,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from app.config import settings
 from app.models import Base
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create engine
 connect_args = {}
@@ -21,35 +24,26 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def init_db():
     """Initialize database tables."""
     Base.metadata.create_all(bind=engine)
-    
-    # Run a lightweight manual migration to add the new color column if it doesn't exist
-    from sqlalchemy import text
-    with engine.begin() as conn:
-        try:
-            # Postgres query to check if column exists
-            check_sql = text("SELECT column_name FROM information_schema.columns WHERE table_name='pins' AND column_name='color';")
-            result = conn.execute(check_sql).fetchone()
-            if not result:
-                conn.execute(text("ALTER TABLE pins ADD COLUMN color VARCHAR(10) NOT NULL DEFAULT 'blue';"))
-                print("Migration: Added 'color' column to 'pins' table.")
-        except Exception as e:
-            print(f"Migration error: {e}")
 
-        # Also apply SQLite lightweight checks if necessary
-        try:
-            # Check if comments table exists
-            check_comments_sql = text("SELECT name FROM sqlite_master WHERE type='table' AND name='comments';")
-            result = conn.execute(check_comments_sql).fetchone()
-            if not result:
-                # SQLAlchemy's create_all will handle it if it doesn't exist, we don't strictly need a raw SQL alter here.
-                # However we can just let Base.metadata.create_all(bind=engine) take care of new tables.
-                pass
-        except Exception as e:
-            pass
+    # Lightweight migration: add 'color' column to pins if it was created before this feature.
+    # Only runs on PostgreSQL (information_schema is not available in SQLite).
+    if not settings.database_url.startswith("sqlite"):
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            try:
+                check_sql = text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name='pins' AND column_name='color';"
+                )
+                result = conn.execute(check_sql).fetchone()
+                if not result:
+                    conn.execute(text("ALTER TABLE pins ADD COLUMN color VARCHAR(10) NOT NULL DEFAULT 'blue';"))
+                    logger.info("Migration: Added 'color' column to 'pins' table.")
+            except Exception as e:
+                logger.warning(f"Migration warning (color column): {e}")
 
 
 def get_db():
-
     """Dependency to get database session."""
     db = SessionLocal()
     try:

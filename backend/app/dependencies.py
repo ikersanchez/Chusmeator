@@ -1,26 +1,28 @@
-"""API dependencies and utilities."""
-from fastapi import Header, HTTPException, Depends
+from fastapi import Header, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
+import uuid
 from app.database import get_db
 from app.models import User
 
 
-def get_current_user_id(x_user_id: str = Header(..., alias="X-User-Id")) -> str:
+def get_current_user_id(request: Request) -> str:
     """
-    Extract and validate user ID from request header.
+    Extract or generate user ID from session cookie.
     
     Args:
-        x_user_id: User ID from X-User-Id header
+        request: FastAPI request object
         
     Returns:
-        Validated user ID string
-        
-    Raises:
-        HTTPException: If user ID header is missing or invalid
+        User ID string
     """
-    if not x_user_id or not x_user_id.strip():
-        raise HTTPException(status_code=400, detail="X-User-Id header is required")
-    return x_user_id.strip()
+    user_id = request.session.get("user_id")
+    
+    if not user_id:
+        # Generate a new unique ID if not present in session
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        request.session["user_id"] = user_id
+        
+    return user_id
 
 
 def ensure_user_exists(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):

@@ -1,12 +1,11 @@
-"""API router for vote endpoints."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
 from app import schemas
-from app.models import VoteModel, PinModel, AreaModel
+from app.models import PinModel, AreaModel
 from app.database import get_db
 from app.dependencies import ensure_user_exists
+from app.services.vote_service import VoteService
 
 router = APIRouter(prefix="/api", tags=["Votes"])
 
@@ -14,7 +13,6 @@ router = APIRouter(prefix="/api", tags=["Votes"])
 TARGET_MODELS = {
     "pin": PinModel,
     "area": AreaModel,
-
 }
 
 
@@ -24,40 +22,22 @@ def create_vote(
     user_id: str = Depends(ensure_user_exists),
     db: Session = Depends(get_db)
 ):
-    """Create a vote on a pin, area, or pixel. One vote per user per item."""
+    """Create a vote on a pin or area. One vote per user per item."""
     # Verify target exists
-    model = TARGET_MODELS.get(vote_data.targetType)
+    model = TARGET_MODELS.get(vote_data.target_type)
     if not model:
         raise HTTPException(status_code=400, detail="Invalid target type")
 
-    target = db.query(model).filter(model.id == vote_data.targetId).first()
+    target = db.query(model).filter(model.id == vote_data.target_id).first()
     if not target:
-        raise HTTPException(status_code=404, detail=f"{vote_data.targetType.capitalize()} not found")
-
-    vote_id = int(datetime.now().timestamp() * 1000000)
-
-    db_vote = VoteModel(
-        id=vote_id,
-        user_id=user_id,
-        target_type=vote_data.targetType,
-        target_id=vote_data.targetId,
-    )
+        raise HTTPException(status_code=404, detail=f"{vote_data.target_type.capitalize()} not found")
 
     try:
-        db.add(db_vote)
-        db.commit()
-        db.refresh(db_vote)
+        db_vote = VoteService.create_vote(db, vote_data, user_id)
+        return db_vote
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="You have already voted on this item")
-
-    return schemas.VoteResponse(
-        id=db_vote.id,
-        userId=db_vote.user_id,
-        targetType=db_vote.target_type,
-        targetId=db_vote.target_id,
-        createdAt=db_vote.created_at,
-    )
 
 
 @router.delete("/votes/{target_type}/{target_id}", response_model=schemas.SuccessResponse)
@@ -71,16 +51,8 @@ def delete_vote(
     if target_type not in TARGET_MODELS:
         raise HTTPException(status_code=400, detail="Invalid target type")
 
-    vote = db.query(VoteModel).filter(
-        VoteModel.user_id == user_id,
-        VoteModel.target_type == target_type,
-        VoteModel.target_id == target_id,
-    ).first()
-
-    if not vote:
+    success = VoteService.delete_vote(db, target_type, target_id, user_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Vote not found")
-
-    db.delete(vote)
-    db.commit()
 
     return schemas.SuccessResponse(success=True)

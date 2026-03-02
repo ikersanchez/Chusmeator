@@ -1,13 +1,12 @@
-"""API router for area endpoints."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
 from app import schemas
-from app.models import AreaModel
 from app.database import get_db
 from app.dependencies import ensure_user_exists
-import traceback
-import sys
+from app.services.area_service import AreaService
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["Areas"])
 
@@ -20,38 +19,13 @@ def create_area(
 ):
     """Create a new area."""
     try:
-        print(f"DEBUG: Creating area for user {user_id}: {area_data.text}")
-        # Generate ID from timestamp (microsecond resolution)
-        area_id = int(datetime.now().timestamp() * 1000000)
-        
-        db_area = AreaModel(
-            id=area_id,
-            latlngs=area_data.latlngs,
-            color=area_data.color,
-            text=area_data.text,
-            font_size=area_data.fontSize,
-            user_id=user_id
-        )
-        
-        db.add(db_area)
-        db.commit()
-        db.refresh(db_area)
-        
-        print(f"DEBUG: Successfully created area {area_id}")
-        
-        # Convert to response schema with camelCase field names
-        return schemas.Area(
-            id=db_area.id,
-            latlngs=db_area.latlngs,
-            color=db_area.color,
-            text=db_area.text,
-            fontSize=db_area.font_size,
-            userId=db_area.user_id,
-            createdAt=db_area.created_at
-        )
+        logger.info(f"Creating area for user {user_id}: {area_data.text}")
+        db_area = AreaService.create_area(db, area_data, user_id)
+        return db_area
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"ERROR creating area: {str(e)}", file=sys.stderr)
-        traceback.print_exc()
+        logger.error(f"ERROR creating area: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -62,18 +36,8 @@ def delete_area(
     db: Session = Depends(get_db)
 ):
     """Delete an area. Only the owner can delete their own areas."""
-    area = db.query(AreaModel).filter(AreaModel.id == area_id).first()
-    
-    if not area:
+    success = AreaService.delete_area(db, area_id, user_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Area not found")
-    
-    if area.user_id != user_id:
-        raise HTTPException(
-            status_code=403,
-            detail="Unauthorized: You can only delete your own areas"
-        )
-    
-    db.delete(area)
-    db.commit()
     
     return schemas.SuccessResponse(success=True)
