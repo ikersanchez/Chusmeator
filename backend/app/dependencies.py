@@ -7,7 +7,7 @@ from app.models import User
 
 def get_current_user_id(request: Request) -> str:
     """
-    Extract or generate user ID from session cookie.
+    Extract or generate user ID from header or session cookie.
     
     Args:
         request: FastAPI request object
@@ -15,10 +15,15 @@ def get_current_user_id(request: Request) -> str:
     Returns:
         User ID string
     """
-    user_id = request.session.get("user_id")
+    # Check header first (useful for development/testing)
+    user_id = request.headers.get("X-User-Id")
     
     if not user_id:
-        # Generate a new unique ID if not present in session
+        # Fallback to session
+        user_id = request.session.get("user_id")
+    
+    if not user_id:
+        # Generate a new unique ID if not present
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         request.session["user_id"] = user_id
         

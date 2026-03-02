@@ -11,8 +11,10 @@ const AreaInteraction = ({ mode }) => {
     const [color, setColor] = useState('blue');
     const [text, setText] = useState('');
     const [isDrawing, setIsDrawing] = useState(false);
-    const [currentUserId, setCurrentUserId] = useState('');
+    const [error, setError] = useState(null);
+    const MAX_AREA_SIZE_DEG = 0.02;
 
+    const [currentUserId, setCurrentUserId] = useState('');
     const map = useMap();
     const editControlRef = React.useRef(null);
 
@@ -45,19 +47,40 @@ const AreaInteraction = ({ mode }) => {
 
     const handleCreated = (e) => {
         const layer = e.layer;
+
+        // Immediate size check on creation
+        const bounds = layer.getBounds();
+        const latDelta = Math.abs(bounds.getNorthEast().lat - bounds.getSouthWest().lat);
+        const lngDelta = Math.abs(bounds.getNorthEast().lng - bounds.getSouthWest().lng);
+
+        if (Math.max(latDelta, lngDelta) > MAX_AREA_SIZE_DEG) {
+            setError("This area is a bit big! We try to keep things neighborhood-sized for a better experience.");
+        } else {
+            setError(null);
+        }
+
         setCurrentLayer(layer);
         setIsDrawing(true);
     };
 
     const handleSave = async (e) => {
         e.preventDefault();
+        setError(null);
         if (!currentLayer || !text) return;
 
-        // Calculate bounds for font size
+        // Calculate bounds for font size and validation
         const bounds = currentLayer.getBounds();
         const northEast = bounds.getNorthEast();
         const southWest = bounds.getSouthWest();
         const latDiff = Math.abs(northEast.lat - southWest.lat);
+        const lngDiff = Math.abs(northEast.lng - southWest.lng);
+
+        // Client-side size validation
+        if (Math.max(latDiff, lngDiff) > MAX_AREA_SIZE_DEG) {
+            setError("Whoops, that's a huge area! Let's keep it local—try drawing a smaller neighborhood instead.");
+            return;
+        }
+
         // Rough heuristic for font size based on lat diff
         const fontSize = Math.max(14, Math.min(48, latDiff * 2000)) + 'px';
 
@@ -70,14 +93,20 @@ const AreaInteraction = ({ mode }) => {
             fontSize,
         };
 
-        const savedArea = await api.saveArea(newArea);
-        setAreas([...areas, savedArea]);
+        try {
+            const savedArea = await api.saveArea(newArea);
+            setAreas([...areas, savedArea]);
 
-        // Cleanup temporary layer and state
-        currentLayer.remove();
-        setCurrentLayer(null);
-        setIsDrawing(false);
-        setText('');
+            // Cleanup temporary layer and state
+            currentLayer.remove();
+            setCurrentLayer(null);
+            setIsDrawing(false);
+            setText('');
+            setError(null);
+        } catch (err) {
+            console.error('Save area error:', err);
+            setError(err.message || 'Failed to save area. It might be too large or you reached your daily limit.');
+        }
     };
 
     const handleCancel = () => {
@@ -265,6 +294,21 @@ const AreaInteraction = ({ mode }) => {
                     minWidth: '300px'
                 }}>
                     <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>Configure Area</h3>
+
+                    {error && (
+                        <div style={{
+                            padding: '10px',
+                            marginBottom: '16px',
+                            background: error.includes('Warning') ? '#fff7ed' : '#fef2f2',
+                            color: error.includes('Warning') ? '#c2410c' : '#b91c1c',
+                            border: error.includes('Warning') ? '1px solid #fdba74' : '1px solid #fecaca',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem'
+                        }}>
+                            {error.includes('Warning') ? '⚠️ ' : '🚫 '} {error}
+                        </div>
+                    )}
+
                     <form onSubmit={handleSave}>
                         <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500' }}>
                             Choose Color:
