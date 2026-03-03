@@ -1,23 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FeatureGroup, Polygon, Tooltip, Popup, useMap } from 'react-leaflet';
 import { EditControl } from 'react-leaflet-draw';
 import { api } from '../../../api/apiService';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
-
-// Apply the global workaround for leaflet-draw touch bug on mobile devices
-if (L.Browser.touch && L.Polygon) {
-    // Force leaflet-draw to treat touchstart events on map as mousedown 
-    // events, which allows placing points on mobile.
-    L.Draw.Polygon.prototype._onTouch = function (e) {
-        this._onMouseDown(e);
-    };
-    // Also patch polyline if ever used
-    L.Draw.Polyline.prototype._onTouch = function (e) {
-        this._onMouseDown(e);
-    };
-}
 
 const AreaInteraction = ({ mode }) => {
     const [areas, setAreas] = useState([]);
@@ -30,7 +17,8 @@ const AreaInteraction = ({ mode }) => {
 
     const [currentUserId, setCurrentUserId] = useState('');
     const map = useMap();
-    const editControlRef = React.useRef(null);
+    const editControlRef = useRef(null);
+    const vertexPlacedRef = useRef(false);
 
     // Load existing areas and user ID on mount
     useEffect(() => {
@@ -46,9 +34,7 @@ const AreaInteraction = ({ mode }) => {
     // Auto-activate polygon drawing when switching to AREA mode
     useEffect(() => {
         if (mode === 'AREA' && !isDrawing) {
-            // Small delay to ensure EditControl is mounted
             const timer = setTimeout(() => {
-                // Programmatically trigger polygon drawing
                 const container = map._container;
                 const drawPolygonBtn = container.querySelector('.leaflet-draw-draw-polygon');
                 if (drawPolygonBtn) {
@@ -58,6 +44,76 @@ const AreaInteraction = ({ mode }) => {
             return () => clearTimeout(timer);
         }
     }, [mode, isDrawing, map]);
+
+    // Mobile touch fix: leaflet-draw's _mouseMarker doesn't follow the finger
+    // on iOS because synthetic mousemove/mousedown fire in the same frame.
+    // Solution: listen for map clicks (which work on ALL platforms) and
+    // programmatically place vertices via the _mouseMarker.
+    useEffect(() => {
+        if (mode !== 'AREA') return;
+
+        // Track if the desktop path already placed a vertex
+        const onMouseDown = () => { vertexPlacedRef.current = true; };
+
+        const onClick = (e) => {
+            // Skip if already handled by desktop mousedown path
+            if (vertexPlacedRef.current) {
+                vertexPlacedRef.current = false;
+                return;
+            }
+            // Skip if the polygon has been completed (editing modal is up)
+            if (currentLayer) return;
+
+            // Find leaflet-draw's _mouseMarker
+            let mouseMarker = null;
+            map.eachLayer((layer) => {
+                if (layer.options && layer.options.icon &&
+                    layer.options.icon.options &&
+                    layer.options.icon.options.className === 'leaflet-mouse-marker') {
+                    mouseMarker = layer;
+                }
+            });
+
+            if (mouseMarker) {
+                mouseMarker.setLatLng(e.latlng);
+                mouseMarker.fire('mousedown', {
+                    latlng: e.latlng,
+                    originalEvent: e.originalEvent
+                });
+                mouseMarker.fire('mouseup', {
+                    latlng: e.latlng,
+                    originalEvent: e.originalEvent
+                });
+            }
+        };
+
+        // Listen for mousedown on _mouseMarker to detect desktop vertex placement
+        const setupMarkerListener = () => {
+            map.eachLayer((layer) => {
+                if (layer.options && layer.options.icon &&
+                    layer.options.icon.options &&
+                    layer.options.icon.options.className === 'leaflet-mouse-marker') {
+                    layer.on('mousedown', onMouseDown);
+                }
+            });
+        };
+
+        // Small delay to ensure draw handler has created the _mouseMarker
+        const timer = setTimeout(setupMarkerListener, 200);
+        map.on('click', onClick);
+
+        return () => {
+            clearTimeout(timer);
+            map.off('click', onClick);
+            map.eachLayer((layer) => {
+                if (layer.options && layer.options.icon &&
+                    layer.options.icon.options &&
+                    layer.options.icon.options.className === 'leaflet-mouse-marker') {
+                    layer.off('mousedown', onMouseDown);
+                }
+            });
+        };
+    }, [mode, currentLayer, map]);
 
     const handleCreated = (e) => {
         const layer = e.layer;
