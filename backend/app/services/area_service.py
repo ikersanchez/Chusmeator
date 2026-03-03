@@ -1,10 +1,53 @@
+from datetime import datetime, timezone, timedelta
+from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models import AreaModel
 from app import schemas
+from app.config import settings
 
 class AreaService:
     @staticmethod
     def create_area(db: Session, area_data: schemas.AreaCreate, user_id: str) -> AreaModel:
+        # 1. Size check
+        if area_data.latlngs:
+            # Flatten latlngs if it's a nested list (Leaflet often sends [[p1, p2, ...]])
+            coords = []
+            for sublist in area_data.latlngs:
+                if isinstance(sublist, list):
+                    for p in sublist:
+                        if isinstance(p, dict):
+                            coords.append(p)
+                elif isinstance(sublist, dict):
+                    coords.append(sublist)
+            
+            if coords:
+                lats = [c.get('lat') for c in coords if 'lat' in c]
+                lngs = [c.get('lng') for c in coords if 'lng' in c]
+                
+                if lats and lngs:
+                    lat_delta = max(lats) - min(lats)
+                    lng_delta = max(lngs) - min(lngs)
+                    
+                    if max(lat_delta, lng_delta) > settings.max_area_size_deg:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Area too large: Bounding box must be smaller than {settings.max_area_size_deg} degrees."
+                        )
+
+        # 2. Rate limit check: max 20 areas per 24 hours
+        one_day_ago = datetime.now(timezone.utc) - timedelta(days=1)
+        area_count = db.query(func.count(AreaModel.id)).filter(
+            AreaModel.user_id == user_id,
+            AreaModel.created_at >= one_day_ago
+        ).scalar()
+        
+        if area_count >= settings.max_areas_per_day:
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Rate limit exceeded: Maximum {settings.max_areas_per_day} areas per day allowed."
+            )
+
         db_area = AreaModel(
             latlngs=area_data.latlngs,
             color=area_data.color.value if hasattr(area_data.color, 'value') else area_data.color,
