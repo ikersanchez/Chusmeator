@@ -70,10 +70,13 @@
 @media (max-width: 768px) {
     .toolbar {
         top: auto;
-        bottom: 20px;
+        bottom: 30px;
+        bottom: calc(20px + env(safe-area-inset-bottom, 0px));
         right: 50%;
         transform: translateX(50%);
         min-width: auto;
+        z-index: 2000;
+        padding: 8px;
     }
 
     .toolbar-buttons {

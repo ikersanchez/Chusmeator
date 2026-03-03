@@ -34,10 +34,10 @@ const ChusmeatorMap = () => {
         <MapContainer
             center={center}
             zoom={13}
-            style={{ height: '100vh', width: '100%' }}
+            style={{ height: '100dvh', width: '100%' }}
             className={`map-mode-${interactionMode.toLowerCase()}`}
         >
-            <LayersControl position="topleft">
+            <LayersControl position="topright">
                 <LayersControl.BaseLayer checked name="OpenStreetMap">
                     <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
