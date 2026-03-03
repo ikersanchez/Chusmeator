@@ -1,0 +1,116 @@
+/* SearchBox.css */
+.search-box-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: auto;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 400px;
+    /* Sensible desktop max width */
+    width: 100%;
+}
+
+.search-input-wrapper {
+    background: white;
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.search-form {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.search-input {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    flex: 1;
+    min-width: 0;
+    font-size: 1rem;
+}
+
+.search-btn {
+    padding: 8px 12px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.search-suggestions {
+    background: white;
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    max-height: 300px;
+    overflow-y: auto;
+    width: 100%;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 2000;
+}
+
+.suggestion-item {
+    padding: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+    transition: background 0.2s;
+}
+
+.suggestion-item:not(:last-child) {
+    border-bottom: 1px solid #eee;
+}
+
+.suggestion-item:hover {
+    background: #f1f5f9;
+}
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 768px) {
+
+    /* Limit the search box width so it doesn't overlap the top-right map controls */
+    .search-box-container {
+        max-width: calc(100vw - 60px);
+        /* Leave room for Leaflet controls on the right */
+    }
+
+    /* Make the padding smaller to save space */
+    .search-input-wrapper {
+        padding: 6px;
+        gap: 4px;
+    }
+
+    .search-form {
+        gap: 4px;
+    }
+
+    .search-input {
+        padding: 6px;
+        font-size: 0.95rem;
+    }
+
+    .search-btn {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+    }
+
+    /* Shrink the Leaflet zoom/layers controls slightly to ensure fit */
+    .leaflet-control-layers-toggle {
+        width: 32px !important;
+        height: 32px !important;
+        background-size: 20px 20px !important;
+    }
+}

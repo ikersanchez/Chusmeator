@@ -15,31 +15,6 @@ const Toolbar = ({ mode, onModeChange }) => {
     return (
         <>
             <div className="toolbar">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <div className="toolbar-title" style={{ margin: 0 }}>Mode</div>
-                    <button
-                        onClick={() => setShowHelp(true)}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '1.2rem',
-                            padding: '4px',
-                            color: '#6b7280',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: '50%',
-                            width: '24px',
-                            height: '24px',
-                        }}
-                        title="Help & Info"
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                    >
-                        ?
-                    </button>
-                </div>
                 <div className="toolbar-buttons">
                     {modes.map((m) => (
                         <button
@@ -52,6 +27,15 @@ const Toolbar = ({ mode, onModeChange }) => {
                             <span className="toolbar-label">{m.label.replace(/[^a-zA-Z\s]/g, '')}</span>
                         </button>
                     ))}
+                    {/* Help Button incorporated into the row */}
+                    <button
+                        className="toolbar-btn help-btn"
+                        onClick={() => setShowHelp(true)}
+                        title="Help & Info"
+                    >
+                        <span className="toolbar-icon">❓</span>
+                        <span className="toolbar-label">Help</span>
+                    </button>
                 </div>
             </div>
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}

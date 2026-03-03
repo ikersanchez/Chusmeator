@@ -287,7 +287,7 @@ const AreaInteraction = ({ mode }) => {
                         </Tooltip>
 
                         {/* Popup with vote button + delete (for all users) */}
-                        <Popup>
+                        <Popup autoPan={false}>
                             <div>
                                 <p><strong>{area.text}</strong></p>
                                 <small>{new Date(area.createdAt).toLocaleDateString()}</small>

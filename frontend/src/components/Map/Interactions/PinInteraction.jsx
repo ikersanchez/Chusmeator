@@ -185,7 +185,7 @@ const PinInteraction = ({ mode }) => {
                             </Tooltip>
                         )}
 
-                        <Popup className="premium-popup">
+                        <Popup className="premium-popup" autoPan={false}>
                             <div className="popup-content">
                                 <strong>Info:</strong> {pin.text} <br />
                                 <small style={{ color: '#666' }}>
@@ -302,7 +302,7 @@ const PinInteraction = ({ mode }) => {
             {/* Temporary pin being created */}
             {newPin && (
                 <Marker position={[newPin.lat, newPin.lng]} icon={createColoredIcon(selectedColor)}>
-                    <Popup autoPan={true} closeButton={false} autoClose={false}>
+                    <Popup autoPan={false} closeButton={false} autoClose={false}>
                         <div className="pin-form" style={{ minWidth: '200px' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Add Info</h3>
                             <form onSubmit={handleSave}>

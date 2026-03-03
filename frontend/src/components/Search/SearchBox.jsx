@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import { api } from '../../api/apiService';
 import { useDebounce } from '../../hooks/useDebounce';
+import './SearchBox.css';
 
 const SearchBox = () => {
     const map = useMap();
@@ -64,27 +65,9 @@ const SearchBox = () => {
     };
 
     return (
-        <div className="search-box-container" style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            right: 'auto',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            maxWidth: 'calc(100vw - 80px)'
-        }}>
-            <div className="search-input-wrapper" style={{
-                background: 'white',
-                padding: '8px',
-                borderRadius: '8px',
-                boxShadow: 'var(--shadow-md)',
-                display: 'flex',
-                gap: '8px',
-                width: '100%'
-            }}>
-                <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', width: '100%' }}>
+        <div className="search-box-container">
+            <div className="search-input-wrapper">
+                <form onSubmit={handleSearch} className="search-form">
                     <input
                         type="text"
                         value={query}
@@ -92,27 +75,12 @@ const SearchBox = () => {
                         onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                         placeholder="Search..."
-                        style={{
-                            padding: '8px',
-                            borderRadius: '4px',
-                            border: '1px solid #ccc',
-                            flex: 1,
-                            minWidth: '0'
-                        }}
+                        className="search-input"
                     />
                     <button
                         type="submit"
                         disabled={isSearching}
-                        style={{
-                            padding: '8px 12px',
-                            background: 'var(--accent)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                            whiteSpace: 'nowrap'
-                        }}
+                        className="search-btn"
                     >
                         {isSearching ? '...' : 'Search'}
                     </button>
@@ -120,18 +88,7 @@ const SearchBox = () => {
             </div>
 
             {showSuggestions && suggestions.length > 0 && (
-                <div className="search-suggestions" style={{
-                    background: 'white',
-                    borderRadius: '8px',
-                    boxShadow: 'var(--shadow-lg)',
-                    maxHeight: '300px',
-                    overflowY: 'auto',
-                    width: '100%',
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    zIndex: 2000
-                }}>
+                <div className="search-suggestions">
                     {suggestions.map((result, index) => (
                         <div
                             key={index}
@@ -140,16 +97,6 @@ const SearchBox = () => {
                                 handleSelect(result);
                             }}
                             className="suggestion-item"
-                            style={{
-                                padding: '10px',
-                                borderBottom: index < suggestions.length - 1 ? '1px solid #eee' : 'none',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                color: 'var(--text)',
-                                transition: 'background 0.2s',
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-                            onMouseLeave={(e) => e.target.style.background = 'white'}
                         >
                             {result.display_name}
                         </div>

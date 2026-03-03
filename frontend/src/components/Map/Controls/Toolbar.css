@@ -1,93 +1,109 @@
 .toolbar {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 1000;
     background: white;
-    padding: 12px;
-    border-radius: 12px;
-    box-shadow: var(--shadow-lg);
-    min-width: 180px;
-}
-
-.toolbar-title {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-    padding-left: 4px;
+    padding: 8px 12px;
+    border-radius: 50px;
+    /* Pill shape */
+    box-shadow: var(--shadow-xl, 0 10px 25px -5px rgba(0, 0, 0, 0.3));
+    display: flex;
+    align-items: center;
 }
 
 .toolbar-buttons {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
 }
 
 .toolbar-btn {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
     border: 2px solid transparent;
-    background: var(--background);
-    border-radius: 8px;
+    background: transparent;
+    border-radius: 30px;
+    /* Inner pill shape */
     cursor: pointer;
-    transition: all var(--transition-fast);
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text);
-    text-align: left;
+    transition: all var(--transition-fast, 0.2s ease);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary, #4b5563);
 }
 
 .toolbar-btn:hover {
     background: #f1f5f9;
-    border-color: var(--accent);
-    transform: translateX(2px);
+    color: var(--text, #1f2937);
 }
 
 .toolbar-btn.active {
-    background: var(--accent);
+    background: var(--accent, #3b82f6);
     color: white;
-    border-color: var(--accent);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    border-color: var(--accent, #3b82f6);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.help-btn {
+    padding: 10px;
+    /* Make it more circular */
+    border-radius: 50%;
+}
+
+.help-btn .toolbar-label {
+    display: none;
+    /* Hide 'Help' text on desktop too to keep it as an icon */
 }
 
 .toolbar-icon {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .toolbar-label {
-    flex: 1;
+    white-space: nowrap;
 }
 
-/* Responsive */
+/* Responsive constraints */
 @media (max-width: 768px) {
     .toolbar {
-        top: auto;
-        bottom: 30px;
         bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-        right: 50%;
-        transform: translateX(50%);
-        min-width: auto;
-        z-index: 2000;
-        padding: 8px;
+        padding: 6px 8px;
+        width: max-content;
+        max-width: 95vw;
     }
 
     .toolbar-buttons {
-        flex-direction: row;
-    }
-
-    .toolbar-label {
-        display: none;
+        gap: 4px;
     }
 
     .toolbar-btn {
         padding: 12px;
+        /* Make them circular on mobile */
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+    }
+
+    .help-btn {
+        width: 48px;
+        height: 48px;
+    }
+
+    /* Hide labels on mobile to save space */
+    .toolbar-label {
+        display: none;
+    }
+
+    .toolbar-icon {
+        font-size: 1.5rem;
+        /* Slightly larger emojis for finger tapping */
     }
 }

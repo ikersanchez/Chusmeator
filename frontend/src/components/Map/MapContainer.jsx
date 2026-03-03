@@ -34,6 +34,7 @@ const ChusmeatorMap = () => {
         <MapContainer
             center={center}
             zoom={13}
+            zoomControl={false}
             style={{ height: '100dvh', width: '100%' }}
             className={`map-mode-${interactionMode.toLowerCase()}`}
         >
