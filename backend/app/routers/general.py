@@ -83,7 +83,7 @@ async def search_address(q: str = Query(..., description="Search query")):
             response = await client.get(
                 f"{settings.nominatim_url}/search",
                 params={"format": "json", "q": q},
-                headers={"User-Agent": "Chusmeator/1.0"},
+                headers={"User-Agent": "ChusmeatorApp/1.0 (contact@chusmeator.com)"},
                 timeout=10.0
             )
             response.raise_for_status()
