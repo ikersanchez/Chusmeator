@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: chusmeator
+    env: docker
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    plan: free # Change to 'starter' or higher for production use
+    region: frankfurt # Or your preferred region
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chusmeator-db
+          property: connectionString
+      - key: ADMIN_KEY
+        generateValue: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://chusmeator.onrender.com # Update this after first deployment
+      - key: PORT
+        value: 8000
+
+databases:
+  - name: chusmeator-db
+    plan: free # Render's free tier database expires after 90 days
+    region: frankfurt

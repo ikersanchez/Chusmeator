@@ -28,7 +28,7 @@ app.add_middleware(
     session_cookie=settings.session_cookie_name,
     max_age=3600 * 24 * 7,  # 1 week
     same_site="lax",
-    https_only=False,  # Set to True in production with HTTPS
+    https_only=True,  # Set to True in production with HTTPS
 )
 
 # Configure CORS - restrict to known origins
