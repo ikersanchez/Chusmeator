@@ -4,7 +4,8 @@
     top: 10px;
     left: 10px;
     right: auto;
-    z-index: 1100;
+    z-index: 9999;
+    /* Maximize z-index to guarantee it sits above all Leaflet layers */
     display: flex;
     flex-direction: column;
     gap: 4px;
