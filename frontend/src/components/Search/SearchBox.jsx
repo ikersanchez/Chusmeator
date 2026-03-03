@@ -9,6 +9,7 @@ const SearchBox = () => {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [showSuggestions, setShowSuggestions] = useState(false);
     const [error, setError] = useState(null);
 
     const debouncedQuery = useDebounce(query, 300);
