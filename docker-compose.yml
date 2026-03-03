@@ -16,10 +16,11 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  app:
     build:
-      context: ./backend
-    container_name: chusmeator-backend
+      context: .
+      dockerfile: Dockerfile
+    container_name: chusmeator-app
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/chusmeator
       - API_HOST=0.0.0.0
@@ -29,23 +30,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
-
-  frontend:
-    build:
-      context: ./frontend
-    container_name: chusmeator-frontend
-    ports:
-      - "80:80"
-    depends_on:
-      backend:
-        condition: service_healthy
 
 volumes:
   postgres_data:
