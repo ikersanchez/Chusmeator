@@ -45,7 +45,7 @@ class AreaModel(Base):
     latlngs = Column(JSON, nullable=False)
     color = Column(String(10), nullable=False)
     text = Column(Text, nullable=False)
-    font_size = Column(String(10), nullable=False)
+    font_size = Column(String(20), nullable=False)
     user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

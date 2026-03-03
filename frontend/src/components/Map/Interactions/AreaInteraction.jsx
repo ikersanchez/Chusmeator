@@ -4,6 +4,7 @@ import { EditControl } from 'react-leaflet-draw';
 import { api } from '../../../api/apiService';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import L from 'leaflet';
+import * as turf from '@turf/turf';
 
 const AreaInteraction = ({ mode }) => {
     const [areas, setAreas] = useState([]);
@@ -56,7 +57,13 @@ const AreaInteraction = ({ mode }) => {
         if (Math.max(latDelta, lngDelta) > MAX_AREA_SIZE_DEG) {
             setError("This area is a bit big! We try to keep things neighborhood-sized for a better experience.");
         } else {
-            setError(null);
+            // Overlap check
+            const isOverlapping = checkOverlap(layer);
+            if (isOverlapping) {
+                setError("Whoops! This area overlaps with an existing one. Try drawing in a clear spot!");
+            } else {
+                setError(null);
+            }
         }
 
         setCurrentLayer(layer);
@@ -82,7 +89,7 @@ const AreaInteraction = ({ mode }) => {
         }
 
         // Rough heuristic for font size based on lat diff
-        const fontSize = Math.max(14, Math.min(48, latDiff * 2000)) + 'px';
+        const fontSize = Math.round(Math.max(14, Math.min(48, latDiff * 2000))) + 'px';
 
         const latlngs = currentLayer.getLatLngs();
 
@@ -142,6 +149,46 @@ const AreaInteraction = ({ mode }) => {
             }
         } catch (error) {
             console.error('Vote error:', error);
+        }
+    };
+
+    const checkOverlap = (layer) => {
+        try {
+            const newCoords = layer.getLatLngs()[0].map(ll => [ll.lng, ll.lat]);
+            // Close the polygon
+            newCoords.push(newCoords[0]);
+            const newPoly = turf.polygon([newCoords]);
+
+            return areas.some(area => {
+                try {
+                    // Extract coordinates from existing area
+                    let areaCoords;
+                    if (Array.isArray(area.latlngs[0])) {
+                        areaCoords = area.latlngs[0].map(ll => [ll.lng, ll.lat]);
+                    } else {
+                        areaCoords = area.latlngs.map(ll => [ll.lng, ll.lat]);
+                    }
+
+                    if (areaCoords.length < 3) return false;
+
+                    // Close the polygon
+                    areaCoords.push(areaCoords[0]);
+                    const existingPoly = turf.polygon([areaCoords]);
+
+                    // booleanIntersects is true if they touch. 
+                    // To be more user friendly, we might want to check if they actually overlap (intersect area > 0)
+                    // but for simplicity and robustness, booleanIntersects is a good start.
+                    // Actually, let's use intersect and check if it returns a polygon
+                    const intersection = turf.intersect(turf.featureCollection([newPoly, existingPoly]));
+                    return intersection !== null;
+                } catch (e) {
+                    console.error("Error checking overlap with area", area.id, e);
+                    return false;
+                }
+            });
+        } catch (e) {
+            console.error("Error in checkOverlap", e);
+            return false;
         }
     };
 
@@ -365,14 +412,15 @@ const AreaInteraction = ({ mode }) => {
                             </button>
                             <button
                                 type="submit"
+                                disabled={!!error && !error.includes('Warning')}
                                 style={{
                                     flex: 1,
                                     padding: '8px 12px',
-                                    background: 'var(--accent)',
+                                    background: (!!error && !error.includes('Warning')) ? '#ccc' : 'var(--accent)',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '6px',
-                                    cursor: 'pointer',
+                                    cursor: (!!error && !error.includes('Warning')) ? 'not-allowed' : 'pointer',
                                     fontWeight: 'bold'
                                 }}
                             >

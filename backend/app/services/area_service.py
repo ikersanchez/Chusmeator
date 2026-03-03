@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from shapely.geometry import Polygon as ShapelyPolygon
 from app.models import AreaModel
 from app import schemas
 from app.config import settings
@@ -48,6 +49,24 @@ class AreaService:
                 detail=f"Rate limit exceeded: Maximum {settings.max_areas_per_day} areas per day allowed."
             )
 
+        # 3. Overlap check
+        if area_data.latlngs:
+            new_poly = AreaService._to_shapely_polygon(area_data.latlngs)
+            if new_poly:
+                existing_areas = db.query(AreaModel).all()
+                for existing in existing_areas:
+                    existing_poly = AreaService._to_shapely_polygon(existing.latlngs)
+                    if existing_poly and new_poly.intersects(existing_poly):
+                        # Calculate intersection area to avoid tiny overlaps due to floating point errors
+                        # but for neighborhoods, even a small overlap might be intentional? 
+                        # Shapely's intersects is usually what we want.
+                        # If they just touch, it's fine. Overlap means intersection area > 0.
+                        if new_poly.intersection(existing_poly).area > 1e-9:
+                            raise HTTPException(
+                                status_code=400,
+                                detail="Area overlaps with an existing one. Please draw in a clear spot!"
+                            )
+
         db_area = AreaModel(
             latlngs=area_data.latlngs,
             color=area_data.color.value if hasattr(area_data.color, 'value') else area_data.color,
@@ -76,3 +95,29 @@ class AreaService:
         db.delete(area)
         db.commit()
         return True
+
+    @staticmethod
+    def _to_shapely_polygon(latlngs) -> ShapelyPolygon | None:
+        """Convert Leaflet-style latlngs to a Shapely Polygon."""
+        try:
+            # Flatten latlngs if it's a nested list
+            coords = []
+            for sublist in latlngs:
+                if isinstance(sublist, list):
+                    for p in sublist:
+                        if isinstance(p, dict):
+                            coords.append((p.get('lng'), p.get('lat')))
+                elif isinstance(sublist, dict):
+                    coords.append((sublist.get('lng'), sublist.get('lat')))
+            
+            if len(coords) < 3:
+                return None
+            
+            # Ensure it's a closed ring for Shapely
+            if coords[0] != coords[-1]:
+                coords.append(coords[0])
+                
+            return ShapelyPolygon(coords)
+        except Exception as e:
+            print(f"Error converting to shapely polygon: {e}")
+            return None
