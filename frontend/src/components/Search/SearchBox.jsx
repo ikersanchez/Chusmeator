@@ -67,46 +67,51 @@ const SearchBox = () => {
         <div className="search-box-container" style={{
             position: 'absolute',
             top: '10px',
-            left: '50px',
+            left: '10px',
+            right: 'auto',
             zIndex: 1000,
             display: 'flex',
             flexDirection: 'column',
-            gap: '4px'
+            gap: '4px',
+            maxWidth: 'calc(100vw - 80px)'
         }}>
             <div className="search-input-wrapper" style={{
                 background: 'white',
-                padding: '10px',
+                padding: '8px',
                 borderRadius: '8px',
                 boxShadow: 'var(--shadow-md)',
                 display: 'flex',
-                gap: '8px'
+                gap: '8px',
+                width: '100%'
             }}>
-                <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
+                <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', width: '100%' }}>
                     <input
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                        placeholder="Search for an address..."
+                        placeholder="Search..."
                         style={{
                             padding: '8px',
                             borderRadius: '4px',
                             border: '1px solid #ccc',
-                            width: '250px'
+                            flex: 1,
+                            minWidth: '0'
                         }}
                     />
                     <button
                         type="submit"
                         disabled={isSearching}
                         style={{
-                            padding: '8px 16px',
+                            padding: '8px 12px',
                             background: 'var(--accent)',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: 'pointer',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            whiteSpace: 'nowrap'
                         }}
                     >
                         {isSearching ? '...' : 'Search'}

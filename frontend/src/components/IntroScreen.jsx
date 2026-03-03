@@ -31,28 +31,33 @@ const IntroScreen = ({ onComplete }) => {
             transition: 'opacity 0.5s ease-out'
         }}>
             <div style={{
-                fontSize: '5rem',
-                marginBottom: '1.5rem',
+                fontSize: 'clamp(3rem, 15vw, 5rem)',
+                marginBottom: '1rem',
                 animation: 'float 3s ease-in-out infinite',
                 filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))'
             }}>
                 🔍
             </div>
             <h1 style={{
-                fontSize: '3rem',
+                fontSize: 'clamp(1.5rem, 8vw, 3rem)',
                 fontWeight: '700',
                 color: 'white',
                 letterSpacing: '-0.03em',
                 textShadow: '0 2px 10px rgba(0,0,0,0.2)',
-                fontFamily: 'Inter, sans-serif'
+                fontFamily: 'Inter, sans-serif',
+                margin: '0',
+                textAlign: 'center',
+                padding: '0 20px'
             }}>
                 Chusmeator
             </h1>
             <p style={{
-                fontSize: '1rem',
+                fontSize: 'clamp(0.875rem, 3vw, 1.125rem)',
                 color: 'rgba(255,255,255,0.9)',
                 marginTop: '0.5rem',
-                fontWeight: '300'
+                fontWeight: '300',
+                textAlign: 'center',
+                padding: '0 20px'
             }}>
                 Discover and share information on the map
             </p>
