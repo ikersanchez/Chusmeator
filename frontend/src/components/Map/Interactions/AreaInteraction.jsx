@@ -6,6 +6,19 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 
+// Apply the global workaround for leaflet-draw touch bug on mobile devices
+if (L.Browser.touch && L.Polygon) {
+    // Force leaflet-draw to treat touchstart events on map as mousedown 
+    // events, which allows placing points on mobile.
+    L.Draw.Polygon.prototype._onTouch = function (e) {
+        this._onMouseDown(e);
+    };
+    // Also patch polyline if ever used
+    L.Draw.Polyline.prototype._onTouch = function (e) {
+        this._onMouseDown(e);
+    };
+}
+
 const AreaInteraction = ({ mode }) => {
     const [areas, setAreas] = useState([]);
     const [currentLayer, setCurrentLayer] = useState(null);

@@ -63,9 +63,19 @@ textarea,
     font-size: 16px !important;
 }
 
-/* Hide the leaflet-draw toolbar — drawing is managed programmatically via the app Toolbar */
+/* Hide the leaflet-draw toolbar visually but keep it in the DOM 
+   so mobile browsers allow programmatically dispatching .click() to it */
 .leaflet-draw {
-    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Fix iOS Safari absorbing touch events during drawing mode */
+.leaflet-container {
+    touch-action: none !important;
 }
 
 /* Base styles for the layers control position */
