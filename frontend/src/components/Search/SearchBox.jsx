@@ -67,65 +67,76 @@ const SearchBox = () => {
         <div className="search-box-container" style={{
             position: 'absolute',
             top: '10px',
-            left: '50px',
+            left: '10px',
+            right: '10px',
             zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px'
+            maxWidth: '420px',
+            pointerEvents: 'none',
         }}>
             <div className="search-input-wrapper" style={{
-                background: 'white',
-                padding: '10px',
-                borderRadius: '8px',
-                boxShadow: 'var(--shadow-md)',
+                background: 'rgba(255, 255, 255, 0.88)',
+                backdropFilter: 'blur(12px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+                padding: '8px',
+                borderRadius: '14px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                border: '1px solid rgba(0,0,0,0.06)',
                 display: 'flex',
-                gap: '8px'
+                gap: '6px',
+                pointerEvents: 'auto',
             }}>
-                <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
+                <form onSubmit={handleSearch} style={{ display: 'flex', gap: '6px', flex: 1 }}>
                     <input
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                        placeholder="Search for an address..."
+                        placeholder="Search address..."
                         style={{
-                            padding: '8px',
-                            borderRadius: '4px',
-                            border: '1px solid #ccc',
-                            width: '250px'
+                            flex: 1,
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(0,0,0,0.08)',
+                            fontSize: '16px',
+                            background: 'rgba(255,255,255,0.7)',
+                            outline: 'none',
+                            minWidth: 0,
                         }}
                     />
                     <button
                         type="submit"
                         disabled={isSearching}
                         style={{
-                            padding: '8px 16px',
+                            padding: '10px 16px',
                             background: 'var(--accent)',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '4px',
+                            borderRadius: '10px',
                             cursor: 'pointer',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            fontSize: '14px',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
                         }}
                     >
-                        {isSearching ? '...' : 'Search'}
+                        {isSearching ? '...' : '🔍'}
                     </button>
                 </form>
             </div>
 
             {showSuggestions && suggestions.length > 0 && (
                 <div className="search-suggestions" style={{
-                    background: 'white',
-                    borderRadius: '8px',
-                    boxShadow: 'var(--shadow-lg)',
-                    maxHeight: '300px',
+                    background: 'rgba(255,255,255,0.95)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    maxHeight: '250px',
                     overflowY: 'auto',
-                    width: '100%',
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    zIndex: 2000
+                    marginTop: '6px',
+                    pointerEvents: 'auto',
+                    border: '1px solid rgba(0,0,0,0.06)',
                 }}>
                     {suggestions.map((result, index) => (
                         <div
@@ -136,15 +147,15 @@ const SearchBox = () => {
                             }}
                             className="suggestion-item"
                             style={{
-                                padding: '10px',
-                                borderBottom: index < suggestions.length - 1 ? '1px solid #eee' : 'none',
+                                padding: '10px 12px',
+                                borderBottom: index < suggestions.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none',
                                 cursor: 'pointer',
                                 fontSize: '14px',
                                 color: 'var(--text)',
-                                transition: 'background 0.2s',
+                                transition: 'background 0.15s',
                             }}
-                            onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-                            onMouseLeave={(e) => e.target.style.background = 'white'}
+                            onMouseEnter={(e) => e.target.style.background = 'rgba(59, 130, 246, 0.06)'}
+                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
                         >
                             {result.display_name}
                         </div>
