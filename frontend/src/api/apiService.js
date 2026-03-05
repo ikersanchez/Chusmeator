@@ -19,10 +19,8 @@ const apiFetch = async (endpoint, options = {}) => {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const msg = errorData.error || errorData.detail || `API error: ${response.status}`;
-            console.error(`API Error: ${msg}`, errorData);
-            // In a real app, we would push this to a notification state/context
-            // For now, we'll just throw and let the component handle it or log it
+            const msg = errorData.detail || errorData.error || `API error: ${response.status}`;
+            console.error(`API Error [${endpoint}]: ${msg}`, errorData);
             throw new Error(msg);
         }
 

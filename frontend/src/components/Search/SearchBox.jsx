@@ -25,7 +25,7 @@ const SearchBox = () => {
                     setShowSuggestions(true);
                 } catch (err) {
                     console.error("Search error:", err);
-                    setError("Search unavailable. Please try again later.");
+                    setError(err.message || "Search unavailable. Please try again later.");
                     setShowSuggestions(true);
                 } finally {
                     setIsSearching(false);
@@ -68,7 +68,7 @@ const SearchBox = () => {
                 }
             } catch (err) {
                 console.error(err);
-                setError("Search unavailable. Please try again later.");
+                setError(err.message || "Search unavailable. Please try again later.");
                 setShowSuggestions(true);
             } finally {
                 setIsSearching(false);

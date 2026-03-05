@@ -86,6 +86,10 @@ async def search_address(q: str = Query(..., description="Search query")):
                 headers={"User-Agent": "ChusmeatorApp/1.0 (contact@chusmeator.com)"},
                 timeout=10.0
             )
+            
+            if response.status_code != 200:
+                print(f"DEBUG: Nominatim search failed with status {response.status_code}: {response.text}")
+                
             response.raise_for_status()
             results = response.json()
             
@@ -97,5 +101,15 @@ async def search_address(q: str = Query(..., description="Search query")):
                 )
                 for item in results
             ]
-    except httpx.HTTPError as e:
+    except httpx.HTTPStatusError as e:
+        detail = f"Search service error ({e.response.status_code})"
+        if e.response.status_code == 403:
+            detail = "Search unavailable from this server (IP blocked by Nominatim). Try again later."
+        elif e.response.status_code == 429:
+            detail = "Search rate limit exceeded. Please wait a moment."
+            
+        print(f"ERROR: Search failed for '{q}': {str(e)}")
+        raise HTTPException(status_code=e.response.status_code, detail=detail)
+    except Exception as e:
+        print(f"ERROR: Unexpected search failure: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
