@@ -11,6 +11,8 @@ button,
 textarea,
 select {
     font-family: inherit;
+    font-size: 16px;
+    /* Prevent iOS Safari auto-zoom on focus */
 }
 
 /* Scrollbar styling */

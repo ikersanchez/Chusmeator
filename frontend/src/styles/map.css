@@ -1,6 +1,8 @@
 .leaflet-container {
     width: 100%;
+    height: 100dvh;
     height: 100vh;
+    /* fallback for older browsers */
     height: 100dvh;
 }
 
@@ -53,34 +55,4 @@
 .custom-pin-icon {
     background: transparent;
     border: none;
-}
-
-/* Prevent iOS Safari from auto-zooming by ensuring inputs are 16px */
-input[type="text"],
-textarea,
-.search-input,
-.leaflet-popup-content input {
-    font-size: 16px !important;
-}
-
-/* Hide the leaflet-draw toolbar — drawing is managed programmatically via the app Toolbar */
-.leaflet-draw {
-    display: none !important;
-}
-
-/* Base styles for the layers control position */
-.leaflet-top.leaflet-right {
-    top: 10px;
-    right: 10px;
-}
-
-/* Mobile responsive positioning for layers control */
-@media (max-width: 768px) {
-
-    /* Move the layer control from top-right to bottom-right to avoid the search bar */
-    .leaflet-top.leaflet-right {
-        top: auto !important;
-        bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
-        right: 10px !important;
-    }
 }

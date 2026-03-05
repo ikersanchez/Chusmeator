@@ -37,6 +37,7 @@ const PinInteraction = ({ mode }) => {
     const [formData, setFormData] = useState('');
     const [selectedColor, setSelectedColor] = useState('blue');
     const [currentUserId, setCurrentUserId] = useState('');
+    const [error, setError] = useState(null);
 
     // Comments state
     const [commentsVisibleForPin, setCommentsVisibleForPin] = useState(null);
@@ -58,33 +59,43 @@ const PinInteraction = ({ mode }) => {
     // Handle map clicks to drop a temporary pin (only in PIN mode)
     useMapEvents({
         click(e) {
-            if (mode !== 'PIN') return; // Only allow pin drops in PIN mode
+            // FIX: If newPin already exists, don't drop a new one or reset form.
+            // This prevented saving on mobile when clicks leaked through.
+            if (mode !== 'PIN' || newPin) return;
 
             setNewPin({
                 lat: e.latlng.lat,
                 lng: e.latlng.lng,
             });
             setFormData(''); // Reset form
+            setError(null);
         },
     });
 
     const handleSave = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         if (!newPin || !formData.trim()) return;
 
-        const savedPin = await api.savePin({
-            lat: newPin.lat,
-            lng: newPin.lng,
-            text: formData,
-            color: selectedColor,
-        });
+        try {
+            const savedPin = await api.savePin({
+                lat: newPin.lat,
+                lng: newPin.lng,
+                text: formData,
+                color: selectedColor,
+            });
 
-        setPins([...pins, savedPin]);
-        setNewPin(null); // Clear temp pin
+            setPins([...pins, savedPin]);
+            setNewPin(null); // Clear temp pin
+            setError(null);
+        } catch (err) {
+            console.error('Save pin error:', err);
+            setError(err.message || 'Failed to save pin.');
+        }
     };
 
     const handleCancel = () => {
         setNewPin(null);
+        setError(null);
     };
 
     const handleDelete = async (pinId) => {
@@ -154,6 +165,25 @@ const PinInteraction = ({ mode }) => {
         }
     };
 
+    const ColorButton = ({ c, label }) => (
+        <div
+            onClick={(e) => {
+                e.stopPropagation();
+                setSelectedColor(c);
+            }}
+            style={{
+                width: '30px',
+                height: '30px',
+                borderRadius: '50%',
+                backgroundColor: c === 'blue' ? '#3b82f6' : c === 'green' ? '#22c55e' : '#ef4444',
+                border: selectedColor === c ? '3px solid var(--text)' : '2px solid transparent',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+            }}
+            title={label}
+        />
+    );
+
 
     return (
         <>
@@ -185,7 +215,7 @@ const PinInteraction = ({ mode }) => {
                             </Tooltip>
                         )}
 
-                        <Popup className="premium-popup" autoPan={false}>
+                        <Popup className="premium-popup">
                             <div className="popup-content">
                                 <strong>Info:</strong> {pin.text} <br />
                                 <small style={{ color: '#666' }}>
@@ -263,10 +293,11 @@ const PinInteraction = ({ mode }) => {
                                                 placeholder="Write a comment..."
                                                 maxLength={100}
                                                 style={{
-                                                    padding: '6px 8px',
-                                                    borderRadius: '4px',
+                                                    padding: '8px 12px',
+                                                    borderRadius: '8px',
                                                     border: '1px solid #cbd5e1',
-                                                    fontSize: '0.85rem'
+                                                    fontSize: '16px',
+                                                    outline: 'none',
                                                 }}
                                             />
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -277,14 +308,15 @@ const PinInteraction = ({ mode }) => {
                                                     type="submit"
                                                     disabled={!newCommentText.trim() || newCommentText.length > 100}
                                                     style={{
-                                                        padding: '4px 8px',
+                                                        padding: '4px 10px',
                                                         background: 'var(--accent)',
                                                         color: 'white',
                                                         border: 'none',
-                                                        borderRadius: '4px',
+                                                        borderRadius: '6px',
                                                         cursor: !newCommentText.trim() || newCommentText.length > 100 ? 'not-allowed' : 'pointer',
-                                                        fontSize: '0.8rem',
-                                                        opacity: !newCommentText.trim() || newCommentText.length > 100 ? 0.5 : 1
+                                                        fontSize: '0.85rem',
+                                                        opacity: !newCommentText.trim() || newCommentText.length > 100 ? 0.5 : 1,
+                                                        fontWeight: '600',
                                                     }}
                                                 >
                                                     Post
@@ -299,87 +331,132 @@ const PinInteraction = ({ mode }) => {
                 );
             })}
 
-            {/* Temporary pin being created */}
+            {/* Temporary pin being created — use bottom sheet style — compact for mobile */}
             {newPin && (
-                <Marker position={[newPin.lat, newPin.lng]} icon={createColoredIcon(selectedColor)}>
-                    <Popup autoPan={false} closeButton={false} autoClose={false}>
-                        <div className="pin-form" style={{ minWidth: '200px' }}>
-                            <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem' }}>Add Info</h3>
-                            <form onSubmit={handleSave}>
-                                <textarea
-                                    value={formData}
-                                    onChange={(e) => setFormData(e.target.value)}
-                                    placeholder="e.g. 'Best Coffee', 'Pickpockets here', 'Hidden Gem'"
-                                    maxLength={100}
+                <>
+                    <Marker position={[newPin.lat, newPin.lng]} icon={createColoredIcon(selectedColor)} />
+
+                    <div
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            position: 'fixed',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            zIndex: 9999,
+                            background: 'rgba(255,255,255,0.96)',
+                            backdropFilter: 'blur(20px)',
+                            WebkitBackdropFilter: 'blur(20px)',
+                            padding: '12px 20px',
+                            paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+                            borderRadius: '20px 20px 0 0',
+                            boxShadow: '0 -8px 40px rgba(0,0,0,0.12)',
+                            maxWidth: '480px',
+                            margin: '0 auto',
+                        }}
+                    >
+                        <div style={{
+                            width: '36px',
+                            height: '4px',
+                            background: '#d1d5db',
+                            borderRadius: '2px',
+                            margin: '0 auto 12px',
+                        }} />
+                        <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 700 }}>Add Pin</h3>
+
+                        {error && (
+                            <div style={{
+                                padding: '8px 10px',
+                                marginBottom: '10px',
+                                background: '#fef2f2',
+                                color: '#b91c1c',
+                                border: '1px solid #fecaca',
+                                borderRadius: '8px',
+                                fontSize: '0.8rem'
+                            }}>
+                                {error}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSave}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                    Color
+                                </label>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <ColorButton c="blue" label="Blue" />
+                                    <ColorButton c="green" label="Green" />
+                                    <ColorButton c="red" label="Red" />
+                                </div>
+                            </div>
+
+                            <textarea
+                                value={formData}
+                                onChange={(e) => setFormData(e.target.value)}
+                                placeholder="e.g. 'Best Coffee', 'Hidden Gem'..."
+                                maxLength={100}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    marginBottom: '6px',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(0,0,0,0.1)',
+                                    fontSize: '16px',
+                                    background: 'rgba(0,0,0,0.02)',
+                                    boxSizing: 'border-box',
+                                    outline: 'none',
+                                    minHeight: '64px',
+                                    fontFamily: 'inherit',
+                                    resize: 'none',
+                                }}
+                                autoFocus
+                            />
+
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '12px', textAlign: 'right' }}>
+                                Get <strong>5 votes</strong> to make it permanent!
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    type="button"
+                                    onClick={handleCancel}
                                     style={{
-                                        width: '100%',
-                                        padding: '8px',
-                                        marginBottom: '4px',
-                                        borderRadius: '4px',
-                                        border: '1px solid #ccc',
-                                        resize: 'vertical',
-                                        minHeight: '60px'
+                                        flex: 1,
+                                        padding: '10px',
+                                        background: '#f1f5f9',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        cursor: 'pointer',
+                                        fontWeight: '600',
+                                        fontSize: '14px',
+                                        color: 'var(--text)',
                                     }}
-                                />
-
-                                <div style={{ marginBottom: '12px' }}>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '4px', fontWeight: 'bold' }}>Color</label>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        {['blue', 'green', 'red'].map(color => (
-                                            <div
-                                                key={color}
-                                                onClick={() => setSelectedColor(color)}
-                                                style={{
-                                                    width: '24px',
-                                                    height: '24px',
-                                                    borderRadius: '50%',
-                                                    backgroundColor: `var(--area-${color})`,
-                                                    border: selectedColor === color ? '3px solid var(--text)' : '1px solid #ccc',
-                                                    cursor: 'pointer',
-                                                    opacity: selectedColor === color ? 1 : 0.6
-                                                }}
-                                                title={color}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '8px', textAlign: 'right' }}>
-                                    Get <strong>5 votes</strong> to make it permanent! 🚀
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                    <button
-                                        type="button"
-                                        onClick={handleCancel}
-                                        style={{
-                                            padding: '4px 8px',
-                                            background: '#e5e7eb',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        style={{
-                                            padding: '4px 12px',
-                                            background: 'var(--accent)',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                            fontWeight: 'bold'
-                                        }}
-                                    >
-                                        Save
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </Popup>
-                </Marker>
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!formData.trim()}
+                                    style={{
+                                        flex: 2,
+                                        padding: '10px',
+                                        background: !formData.trim() ? '#ccc' : 'var(--accent)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        cursor: !formData.trim() ? 'not-allowed' : 'pointer',
+                                        fontWeight: 'bold',
+                                        fontSize: '14px',
+                                        boxShadow: !formData.trim() ? 'none' : '0 2px 10px rgba(59,130,246,0.3)',
+                                    }}
+                                >
+                                    Save Pin
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </>
             )}
         </>
     );

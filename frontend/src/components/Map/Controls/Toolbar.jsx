@@ -6,10 +6,9 @@ const Toolbar = ({ mode, onModeChange }) => {
     const [showHelp, setShowHelp] = React.useState(false);
 
     const modes = [
-        { id: 'VIEW', label: '👁️ View', icon: '👁️', description: 'Navigate the map' },
-        { id: 'PIN', label: '📍 Add Pin', icon: '📍', description: 'Click to add a pin' },
-        { id: 'AREA', label: '🗺️ Draw Area', icon: '🗺️', description: 'Draw an area on the map' },
-
+        { id: 'VIEW', label: 'View', icon: '👁️', description: 'Navigate the map' },
+        { id: 'PIN', label: 'Pin', icon: '📍', description: 'Click to add a pin' },
+        { id: 'AREA', label: 'Area', icon: '🗺️', description: 'Draw an area on the map' },
     ];
 
     return (
@@ -24,19 +23,17 @@ const Toolbar = ({ mode, onModeChange }) => {
                             title={m.description}
                         >
                             <span className="toolbar-icon">{m.icon}</span>
-                            <span className="toolbar-label">{m.label.replace(/[^a-zA-Z\s]/g, '')}</span>
+                            <span className="toolbar-label">{m.label}</span>
                         </button>
                     ))}
-                    {/* Help Button incorporated into the row */}
-                    <button
-                        className="toolbar-btn help-btn"
-                        onClick={() => setShowHelp(true)}
-                        title="Help & Info"
-                    >
-                        <span className="toolbar-icon">❓</span>
-                        <span className="toolbar-label">Help</span>
-                    </button>
                 </div>
+                <button
+                    className="toolbar-help-btn"
+                    onClick={() => setShowHelp(true)}
+                    title="Help & Info"
+                >
+                    ?
+                </button>
             </div>
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
         </>

@@ -1,109 +1,141 @@
 .toolbar {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
     z-index: 1000;
-    background: white;
-    padding: 8px 12px;
-    border-radius: 50px;
-    /* Pill shape */
-    box-shadow: var(--shadow-xl, 0 10px 25px -5px rgba(0, 0, 0, 0.3));
     display: flex;
     align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    /* Full border instead of top only */
+    border-radius: 20px;
+    /* Fully rounded on all sides */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    gap: 6px;
+}
+
+.toolbar-title {
+    display: none;
 }
 
 .toolbar-buttons {
     display: flex;
     flex-direction: row;
     gap: 8px;
-    align-items: center;
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
 }
 
 .toolbar-btn {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 10px 16px;
-    border: 2px solid transparent;
+    gap: 2px;
+    flex: 1;
+    max-width: 100px;
+    padding: 8px 6px;
+    border: none;
     background: transparent;
-    border-radius: 30px;
-    /* Inner pill shape */
+    border-radius: 14px;
     cursor: pointer;
-    transition: all var(--transition-fast, 0.2s ease);
-    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    font-size: 0.72rem;
     font-weight: 600;
-    color: var(--text-secondary, #4b5563);
+    color: var(--text-secondary);
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .toolbar-btn:hover {
-    background: #f1f5f9;
-    color: var(--text, #1f2937);
+    background: rgba(59, 130, 246, 0.08);
+    color: var(--accent);
+    transform: none;
+}
+
+.toolbar-btn:active {
+    transform: scale(0.93);
 }
 
 .toolbar-btn.active {
-    background: var(--accent, #3b82f6);
+    background: var(--accent);
     color: white;
-    border-color: var(--accent, #3b82f6);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.35);
 }
 
-.help-btn {
-    padding: 10px;
-    /* Make it more circular */
-    border-radius: 50%;
-}
-
-.help-btn .toolbar-label {
-    display: none;
-    /* Hide 'Help' text on desktop too to keep it as an icon */
+.toolbar-btn.active:hover {
+    background: var(--accent-hover);
 }
 
 .toolbar-icon {
-    font-size: 1.3rem;
+    font-size: 1.35rem;
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .toolbar-label {
+    display: block;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Responsive constraints */
-@media (max-width: 768px) {
+.toolbar-help-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 8px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+}
+
+.toolbar-help-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--accent);
+}
+
+/* ─── Desktop layout (wider screens) ─── */
+@media (min-width: 769px) {
     .toolbar {
-        bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-        padding: 6px 8px;
-        width: max-content;
-        max-width: 95vw;
+        bottom: 16px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        border-radius: 20px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        padding: 8px 12px;
+        width: auto;
+        min-width: 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     }
 
     .toolbar-buttons {
-        gap: 4px;
+        width: auto;
     }
 
     .toolbar-btn {
-        padding: 12px;
-        /* Make them circular on mobile */
-        border-radius: 50%;
-        width: 48px;
-        height: 48px;
-    }
-
-    .help-btn {
-        width: 48px;
-        height: 48px;
-    }
-
-    /* Hide labels on mobile to save space */
-    .toolbar-label {
-        display: none;
-    }
-
-    .toolbar-icon {
-        font-size: 1.5rem;
-        /* Slightly larger emojis for finger tapping */
+        flex: 0;
+        flex-direction: row;
+        gap: 6px;
+        padding: 8px 16px;
+        max-width: none;
     }
 }

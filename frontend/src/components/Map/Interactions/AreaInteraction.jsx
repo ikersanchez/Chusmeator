@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FeatureGroup, Polygon, Tooltip, Popup, useMap } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FeatureGroup, Polygon, Polyline, CircleMarker, Tooltip, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { api } from '../../../api/apiService';
-import 'leaflet-draw/dist/leaflet.draw.css';
-import L from 'leaflet';
 import * as turf from '@turf/turf';
 
 const AreaInteraction = ({ mode }) => {
@@ -15,10 +12,12 @@ const AreaInteraction = ({ mode }) => {
     const [error, setError] = useState(null);
     const MAX_AREA_SIZE_DEG = 0.02;
 
+    // Manual drawing state
+    const [drawPoints, setDrawPoints] = useState([]);
+    const [isManualDrawing, setIsManualDrawing] = useState(false);
+
     const [currentUserId, setCurrentUserId] = useState('');
     const map = useMap();
-    const editControlRef = useRef(null);
-    const vertexPlacedRef = useRef(false);
 
     // Load existing areas and user ID on mount
     useEffect(() => {
@@ -31,103 +30,33 @@ const AreaInteraction = ({ mode }) => {
         loadData();
     }, []);
 
-    // Auto-activate polygon drawing when switching to AREA mode
+    // Auto-start manual drawing when switching to AREA mode
     useEffect(() => {
-        if (mode === 'AREA' && !isDrawing) {
-            const timer = setTimeout(() => {
-                const container = map._container;
-                const drawPolygonBtn = container.querySelector('.leaflet-draw-draw-polygon');
-                if (drawPolygonBtn) {
-                    drawPolygonBtn.click();
-                }
-            }, 100);
-            return () => clearTimeout(timer);
+        if (mode === 'AREA' && !isDrawing && !isManualDrawing) {
+            setIsManualDrawing(true);
+            setDrawPoints([]);
         }
-    }, [mode, isDrawing, map]);
+        if (mode !== 'AREA') {
+            // If user switches away, cancel drawing
+            setIsManualDrawing(false);
+            setDrawPoints([]);
+        }
+    }, [mode, isDrawing, isManualDrawing]);
 
-    // Mobile touch fix: leaflet-draw's _mouseMarker doesn't follow the finger
-    // on iOS because synthetic mousemove/mousedown fire in the same frame.
-    // Solution: listen for map clicks (which work on ALL platforms) and
-    // programmatically place vertices via the _mouseMarker.
-    useEffect(() => {
-        if (mode !== 'AREA') return;
+    const handleFinishDraw = useCallback((points = drawPoints) => {
+        if (points.length < 3) return;
 
-        // Track if the desktop path already placed a vertex
-        const onMouseDown = () => { vertexPlacedRef.current = true; };
-
-        const onClick = (e) => {
-            // Skip if already handled by desktop mousedown path
-            if (vertexPlacedRef.current) {
-                vertexPlacedRef.current = false;
-                return;
-            }
-            // Skip if the polygon has been completed (editing modal is up)
-            if (currentLayer) return;
-
-            // Find leaflet-draw's _mouseMarker
-            let mouseMarker = null;
-            map.eachLayer((layer) => {
-                if (layer.options && layer.options.icon &&
-                    layer.options.icon.options &&
-                    layer.options.icon.options.className === 'leaflet-mouse-marker') {
-                    mouseMarker = layer;
-                }
-            });
-
-            if (mouseMarker) {
-                mouseMarker.setLatLng(e.latlng);
-                mouseMarker.fire('mousedown', {
-                    latlng: e.latlng,
-                    originalEvent: e.originalEvent
-                });
-                mouseMarker.fire('mouseup', {
-                    latlng: e.latlng,
-                    originalEvent: e.originalEvent
-                });
-            }
-        };
-
-        // Listen for mousedown on _mouseMarker to detect desktop vertex placement
-        const setupMarkerListener = () => {
-            map.eachLayer((layer) => {
-                if (layer.options && layer.options.icon &&
-                    layer.options.icon.options &&
-                    layer.options.icon.options.className === 'leaflet-mouse-marker') {
-                    layer.on('mousedown', onMouseDown);
-                }
-            });
-        };
-
-        // Small delay to ensure draw handler has created the _mouseMarker
-        const timer = setTimeout(setupMarkerListener, 200);
-        map.on('click', onClick);
-
-        return () => {
-            clearTimeout(timer);
-            map.off('click', onClick);
-            map.eachLayer((layer) => {
-                if (layer.options && layer.options.icon &&
-                    layer.options.icon.options &&
-                    layer.options.icon.options.className === 'leaflet-mouse-marker') {
-                    layer.off('mousedown', onMouseDown);
-                }
-            });
-        };
-    }, [mode, currentLayer, map]);
-
-    const handleCreated = (e) => {
-        const layer = e.layer;
-
-        // Immediate size check on creation
-        const bounds = layer.getBounds();
-        const latDelta = Math.abs(bounds.getNorthEast().lat - bounds.getSouthWest().lat);
-        const lngDelta = Math.abs(bounds.getNorthEast().lng - bounds.getSouthWest().lng);
+        // Validate size
+        const lats = points.map(p => p[0]);
+        const lngs = points.map(p => p[1]);
+        const latDelta = Math.max(...lats) - Math.min(...lats);
+        const lngDelta = Math.max(...lngs) - Math.min(...lngs);
 
         if (Math.max(latDelta, lngDelta) > MAX_AREA_SIZE_DEG) {
             setError("This area is a bit big! We try to keep things neighborhood-sized for a better experience.");
         } else {
             // Overlap check
-            const isOverlapping = checkOverlap(layer);
+            const isOverlapping = checkOverlapFromPoints(points);
             if (isOverlapping) {
                 setError("Whoops! This area overlaps with an existing one. Try drawing in a clear spot!");
             } else {
@@ -135,21 +64,68 @@ const AreaInteraction = ({ mode }) => {
             }
         }
 
-        setCurrentLayer(layer);
+        // Store the polygon points and show form
+        setCurrentLayer(points);
         setIsDrawing(true);
-    };
+        setIsManualDrawing(false);
+    }, [drawPoints, areas]);
+
+    // Handle map clicks for manual drawing
+    useMapEvents({
+        click(e) {
+            if (mode !== 'AREA' || !isManualDrawing || isDrawing) return;
+
+            // Check proximity to start point if we have at least 3 points
+            if (drawPoints.length >= 3) {
+                const startPoint = drawPoints[0];
+                const startPx = map.latLngToLayerPoint([startPoint[0], startPoint[1]]);
+                const currentPx = map.latLngToLayerPoint(e.latlng);
+                const distance = startPx.distanceTo(currentPx);
+
+                // If clicked within 25 pixels of the start point, close the area
+                if (distance < 25) {
+                    handleFinishDraw(drawPoints);
+                    return;
+                }
+            }
+
+            setDrawPoints(prev => [...prev, [e.latlng.lat, e.latlng.lng]]);
+        }
+    });
+
+    const handleUndoPoint = useCallback(() => {
+        setDrawPoints(prev => prev.slice(0, -1));
+    }, []);
+
+    const handleCancelDraw = useCallback(() => {
+        setDrawPoints([]);
+        setIsManualDrawing(false);
+    }, []);
 
     const handleSave = async (e) => {
         e.preventDefault();
         setError(null);
         if (!currentLayer || !text) return;
 
-        // Calculate bounds for font size and validation
-        const bounds = currentLayer.getBounds();
-        const northEast = bounds.getNorthEast();
-        const southWest = bounds.getSouthWest();
-        const latDiff = Math.abs(northEast.lat - southWest.lat);
-        const lngDiff = Math.abs(northEast.lng - southWest.lng);
+        let latlngs;
+        let latDiff, lngDiff;
+
+        if (Array.isArray(currentLayer)) {
+            // Manual drawing — currentLayer is array of [lat, lng]
+            latlngs = [currentLayer.map(p => ({ lat: p[0], lng: p[1] }))];
+            const lats = currentLayer.map(p => p[0]);
+            const lngs = currentLayer.map(p => p[1]);
+            latDiff = Math.max(...lats) - Math.min(...lats);
+            lngDiff = Math.max(...lngs) - Math.min(...lngs);
+        } else {
+            // Legacy leaflet-draw layer
+            const bounds = currentLayer.getBounds();
+            const northEast = bounds.getNorthEast();
+            const southWest = bounds.getSouthWest();
+            latDiff = Math.abs(northEast.lat - southWest.lat);
+            lngDiff = Math.abs(northEast.lng - southWest.lng);
+            latlngs = currentLayer.getLatLngs();
+        }
 
         // Client-side size validation
         if (Math.max(latDiff, lngDiff) > MAX_AREA_SIZE_DEG) {
@@ -159,8 +135,6 @@ const AreaInteraction = ({ mode }) => {
 
         // Rough heuristic for font size based on lat diff
         const fontSize = Math.round(Math.max(14, Math.min(48, latDiff * 2000))) + 'px';
-
-        const latlngs = currentLayer.getLatLngs();
 
         const newArea = {
             latlngs,
@@ -173,10 +147,13 @@ const AreaInteraction = ({ mode }) => {
             const savedArea = await api.saveArea(newArea);
             setAreas([...areas, savedArea]);
 
-            // Cleanup temporary layer and state
-            currentLayer.remove();
+            // Cleanup
+            if (!Array.isArray(currentLayer) && currentLayer.remove) {
+                currentLayer.remove();
+            }
             setCurrentLayer(null);
             setIsDrawing(false);
+            setDrawPoints([]);
             setText('');
             setError(null);
         } catch (err) {
@@ -186,12 +163,17 @@ const AreaInteraction = ({ mode }) => {
     };
 
     const handleCancel = () => {
-        if (currentLayer) {
+        if (currentLayer && !Array.isArray(currentLayer) && currentLayer.remove) {
             currentLayer.remove();
         }
         setCurrentLayer(null);
         setIsDrawing(false);
+        setDrawPoints([]);
         setText('');
+        // Re-enter drawing mode
+        if (mode === 'AREA') {
+            setIsManualDrawing(true);
+        }
     };
 
     const handleDelete = async (areaId) => {
@@ -221,33 +203,23 @@ const AreaInteraction = ({ mode }) => {
         }
     };
 
-    const checkOverlap = (layer) => {
+    const checkOverlapFromPoints = (points) => {
         try {
-            const newCoords = layer.getLatLngs()[0].map(ll => [ll.lng, ll.lat]);
-            // Close the polygon
-            newCoords.push(newCoords[0]);
-            const newPoly = turf.polygon([newCoords]);
+            const coords = points.map(p => [p[1], p[0]]); // [lng, lat]
+            coords.push(coords[0]); // close polygon
+            const newPoly = turf.polygon([coords]);
 
             return areas.some(area => {
                 try {
-                    // Extract coordinates from existing area
                     let areaCoords;
                     if (Array.isArray(area.latlngs[0])) {
                         areaCoords = area.latlngs[0].map(ll => [ll.lng, ll.lat]);
                     } else {
                         areaCoords = area.latlngs.map(ll => [ll.lng, ll.lat]);
                     }
-
                     if (areaCoords.length < 3) return false;
-
-                    // Close the polygon
                     areaCoords.push(areaCoords[0]);
                     const existingPoly = turf.polygon([areaCoords]);
-
-                    // booleanIntersects is true if they touch. 
-                    // To be more user friendly, we might want to check if they actually overlap (intersect area > 0)
-                    // but for simplicity and robustness, booleanIntersects is a good start.
-                    // Actually, let's use intersect and check if it returns a polygon
                     const intersection = turf.intersect(turf.featureCollection([newPoly, existingPoly]));
                     return intersection !== null;
                 } catch (e) {
@@ -256,14 +228,12 @@ const AreaInteraction = ({ mode }) => {
                 }
             });
         } catch (e) {
-            console.error("Error in checkOverlap", e);
+            console.error("Error in checkOverlapFromPoints", e);
             return false;
         }
     };
 
     const getVoteFontSize = (area) => {
-        // Parse base font size and boost proportionally to votes
-        // displayFontSize = baseFontSize * (1 + min(votes, 50) * 0.02)
         const basePx = parseFloat(area.fontSize) || 14;
         const boost = 1 + Math.min(area.votes || 0, 50) * 0.02;
         return basePx * boost + 'px';
@@ -272,58 +242,26 @@ const AreaInteraction = ({ mode }) => {
     const ColorButton = ({ c, label }) => (
         <button
             type="button"
-            onClick={() => setColor(c)}
+            onClick={(e) => {
+                e.stopPropagation();
+                setColor(c);
+            }}
             style={{
                 backgroundColor: c === 'blue' ? 'rgba(59, 130, 246, 0.6)' : c === 'green' ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)',
-                border: color === c ? '2px solid black' : '1px solid #ccc',
-                width: '30px',
-                height: '30px',
+                border: color === c ? '3px solid var(--text)' : '2px solid transparent',
+                width: '32px',
+                height: '32px',
                 borderRadius: '50%',
                 cursor: 'pointer',
-                margin: '0 5px'
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
             }}
             title={label}
         />
     );
 
-    // Only enable drawing when in AREA mode
-    const drawOptions = mode === 'AREA' ? {
-        rectangle: false,
-        circle: false,
-        circlemarker: false,
-        marker: false,
-        polyline: false,
-        polygon: {
-            allowIntersection: false,
-            drawError: {
-                color: '#e1e100',
-                message: '<strong>Oh snap!</strong> you can\'t draw that!'
-            },
-            shapeOptions: {
-                color: '#3b82f6'
-            }
-        }
-    } : {
-        rectangle: false,
-        circle: false,
-        circlemarker: false,
-        marker: false,
-        polyline: false,
-        polygon: false
-    };
-
     return (
         <FeatureGroup>
-            <EditControl
-                position="topleft"
-                onCreated={handleCreated}
-                draw={drawOptions}
-                edit={{
-                    edit: false,
-                    remove: false
-                }}
-            />
-
             {/* Render saved areas */}
             {areas.map((area) => {
                 const isOwner = area.userId === currentUserId;
@@ -338,7 +276,6 @@ const AreaInteraction = ({ mode }) => {
                             fillOpacity: 0.4
                         }}
                     >
-                        {/* Modern text label without box — font scaled by votes */}
                         <Tooltip
                             permanent
                             direction="center"
@@ -355,13 +292,11 @@ const AreaInteraction = ({ mode }) => {
                             </div>
                         </Tooltip>
 
-                        {/* Popup with vote button + delete (for all users) */}
-                        <Popup autoPan={false}>
+                        <Popup>
                             <div>
                                 <p><strong>{area.text}</strong></p>
                                 <small>{new Date(area.createdAt).toLocaleDateString()}</small>
 
-                                {/* Vote button */}
                                 <div style={{ marginTop: '8px' }}>
                                     <button
                                         onClick={() => handleVote(area)}
@@ -395,86 +330,214 @@ const AreaInteraction = ({ mode }) => {
                 );
             })}
 
-            {/* Configuration Modal/Popup for new area */}
+            {/* Visual feedback while manually drawing */}
+            {isManualDrawing && drawPoints.length >= 2 && (
+                <Polyline
+                    positions={drawPoints}
+                    pathOptions={{ color: '#3b82f6', weight: 3, dashArray: '8, 8' }}
+                />
+            )}
+            {isManualDrawing && drawPoints.length >= 3 && (
+                <Polygon
+                    positions={drawPoints}
+                    pathOptions={{ color: '#3b82f6', fillOpacity: 0.15, weight: 1, dashArray: '4, 4' }}
+                />
+            )}
+            {isManualDrawing && drawPoints.map((pt, i) => (
+                <CircleMarker
+                    key={i}
+                    center={pt}
+                    radius={i === 0 ? 10 : 6} // Highlight start point
+                    pathOptions={{
+                        color: i === 0 ? '#3b82f6' : '#fff',
+                        weight: 2,
+                        fillColor: i === 0 ? '#fff' : '#3b82f6',
+                        fillOpacity: 1
+                    }}
+                >
+                    {i === 0 && drawPoints.length >= 3 && (
+                        <Tooltip permanent direction="top" className="start-point-tooltip">
+                            Tap here to finish
+                        </Tooltip>
+                    )}
+                </CircleMarker>
+            ))}
+
+            {/* In-progress drawing preview for finalized polygon */}
+            {isDrawing && Array.isArray(currentLayer) && (
+                <Polygon
+                    positions={currentLayer}
+                    pathOptions={{ color: '#3b82f6', fillOpacity: 0.3 }}
+                />
+            )}
+
+            {/* ─── Drawing HUD (bottom bar while tapping points) ─── */}
+            {isManualDrawing && (
+                <div
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                        position: 'fixed',
+                        bottom: '80px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 1100,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        background: 'rgba(255,255,255,0.9)',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        padding: '10px 16px',
+                        borderRadius: '16px',
+                        boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+                        border: '1px solid rgba(0,0,0,0.06)',
+                    }}
+                >
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{
+                            fontSize: '13px',
+                            color: 'var(--text)',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                        }}>
+                            {drawPoints.length === 0 ? 'Start drawing' : `${drawPoints.length} Points`}
+                        </span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                            {drawPoints.length < 3 ? 'Add 3+ points' : 'Tap start to finish'}
+                        </span>
+                    </div>
+
+                    <div style={{ width: '1px', height: '24px', background: 'rgba(0,0,0,0.1)', margin: '0 4px' }} />
+
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleUndoPoint(); }}
+                        disabled={drawPoints.length === 0}
+                        style={{
+                            padding: '8px 12px',
+                            background: 'transparent',
+                            color: drawPoints.length === 0 ? '#9ca3af' : 'var(--text)',
+                            border: 'none',
+                            borderRadius: '10px',
+                            cursor: drawPoints.length === 0 ? 'default' : 'pointer',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                        }}
+                    >
+                        Undo
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleCancelDraw(); }}
+                        style={{
+                            padding: '8px 12px',
+                            background: 'transparent',
+                            color: '#ef4444',
+                            border: 'none',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                        }}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            )}
+
+            {/* ─── Configuration Modal for new area (modern bottom sheet style on mobile) ─── */}
             {isDrawing && currentLayer && (
-                <div style={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 9999,
-                    background: 'white',
-                    padding: '20px',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-                    minWidth: '300px'
-                }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>Configure Area</h3>
+                <div
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: 9999,
+                        background: 'rgba(255,255,255,0.96)',
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        padding: '12px 20px',
+                        paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+                        borderRadius: '20px 20px 0 0',
+                        boxShadow: '0 -8px 40px rgba(0,0,0,0.12)',
+                        maxWidth: '480px',
+                        margin: '0 auto',
+                    }}
+                >
+                    <div style={{
+                        width: '36px',
+                        height: '4px',
+                        background: '#d1d5db',
+                        borderRadius: '2px',
+                        margin: '0 auto 12px',
+                    }} />
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 700 }}>Configure Area</h3>
 
                     {error && (
                         <div style={{
-                            padding: '10px',
-                            marginBottom: '16px',
+                            padding: '8px 10px',
+                            marginBottom: '10px',
                             background: error.includes('Warning') ? '#fff7ed' : '#fef2f2',
                             color: error.includes('Warning') ? '#c2410c' : '#b91c1c',
                             border: error.includes('Warning') ? '1px solid #fdba74' : '1px solid #fecaca',
-                            borderRadius: '6px',
-                            fontSize: '0.85rem'
+                            borderRadius: '8px',
+                            fontSize: '0.8rem'
                         }}>
                             {error.includes('Warning') ? '⚠️ ' : '🚫 '} {error}
                         </div>
                     )}
 
                     <form onSubmit={handleSave}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500' }}>
-                            Choose Color:
-                        </label>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                Color
+                            </label>
+                            <div style={{ display: 'flex', gap: '12px' }}>
                                 <ColorButton c="blue" label="Blue" />
                                 <ColorButton c="green" label="Green" />
                                 <ColorButton c="red" label="Red" />
                             </div>
-                            <small style={{ fontSize: '0.75rem', color: '#666' }}>
-                                (Blue: Neutral, Green: Safe, Red: Busy/Danger)
-                            </small>
                         </div>
 
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500' }}>
-                            Area Label:
-                        </label>
                         <input
                             type="text"
                             value={text}
                             onChange={e => setText(e.target.value)}
-                            placeholder="e.g. 'Hipster Main St', 'Tourist Trap', 'Quiet Zone'"
+                            placeholder="e.g. 'Hipster Main St', 'Tourist Trap'"
                             maxLength={100}
                             style={{
                                 width: '100%',
-                                padding: '10px',
+                                padding: '10px 12px',
                                 marginBottom: '4px',
-                                borderRadius: '6px',
-                                border: '1px solid #ccc',
-                                fontSize: '0.95rem'
+                                borderRadius: '10px',
+                                border: '1px solid rgba(0,0,0,0.1)',
+                                fontSize: '16px',
+                                background: 'rgba(0,0,0,0.02)',
+                                boxSizing: 'border-box',
+                                outline: 'none',
                             }}
                             autoFocus
                         />
-                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '16px', textAlign: 'right' }}>
-                            More votes = <strong>BIGGER</strong> text! 📈
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '12px', textAlign: 'right' }}>
+                            More votes = <strong>BIGGER</strong> text!
                         </div>
 
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button
                                 type="button"
-                                onClick={handleCancel}
+                                onClick={(e) => { e.stopPropagation(); handleCancel(); }}
                                 style={{
                                     flex: 1,
-                                    padding: '8px 12px',
-                                    background: '#e5e7eb',
+                                    padding: '10px',
+                                    background: '#f1f5f9',
                                     border: 'none',
-                                    borderRadius: '6px',
+                                    borderRadius: '10px',
                                     cursor: 'pointer',
-                                    fontWeight: '500'
+                                    fontWeight: '600',
+                                    fontSize: '14px',
+                                    color: 'var(--text)',
                                 }}
                             >
                                 Cancel
@@ -483,14 +546,16 @@ const AreaInteraction = ({ mode }) => {
                                 type="submit"
                                 disabled={!!error && !error.includes('Warning')}
                                 style={{
-                                    flex: 1,
-                                    padding: '8px 12px',
+                                    flex: 2,
+                                    padding: '10px',
                                     background: (!!error && !error.includes('Warning')) ? '#ccc' : 'var(--accent)',
                                     color: 'white',
                                     border: 'none',
-                                    borderRadius: '6px',
+                                    borderRadius: '10px',
                                     cursor: (!!error && !error.includes('Warning')) ? 'not-allowed' : 'pointer',
-                                    fontWeight: 'bold'
+                                    fontWeight: 'bold',
+                                    fontSize: '14px',
+                                    boxShadow: (!!error && !error.includes('Warning')) ? 'none' : '0 2px 10px rgba(59,130,246,0.3)',
                                 }}
                             >
                                 Save Area
