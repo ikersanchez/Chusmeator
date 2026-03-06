@@ -273,7 +273,8 @@ const AreaInteraction = ({ mode }) => {
                         positions={area.latlngs}
                         pathOptions={{
                             color: colorHex,
-                            fillOpacity: 0.4
+                            fillOpacity: 0.4,
+                            interactive: mode !== 'PIN'
                         }}
                     >
                         <Tooltip
@@ -281,6 +282,7 @@ const AreaInteraction = ({ mode }) => {
                             direction="center"
                             className="modern-tooltip"
                             offset={[0, 0]}
+                            interactive={mode !== 'PIN'}
                         >
                             <div
                                 className="map-label-style"
@@ -292,40 +294,42 @@ const AreaInteraction = ({ mode }) => {
                             </div>
                         </Tooltip>
 
-                        <Popup>
-                            <div>
-                                <p><strong>{area.text}</strong></p>
-                                <small>{new Date(area.createdAt).toLocaleDateString()}</small>
+                        {mode !== 'PIN' && (
+                            <Popup>
+                                <div>
+                                    <p><strong>{area.text}</strong></p>
+                                    <small>{new Date(area.createdAt).toLocaleDateString()}</small>
 
-                                <div style={{ marginTop: '8px' }}>
-                                    <button
-                                        onClick={() => handleVote(area)}
-                                        className={`vote-btn ${area.userVoted ? 'voted' : ''}`}
-                                    >
-                                        👍 {area.votes}
-                                    </button>
-                                </div>
-
-                                {isOwner && (
                                     <div style={{ marginTop: '8px' }}>
                                         <button
-                                            onClick={() => handleDelete(area.id)}
-                                            style={{
-                                                padding: '4px 8px',
-                                                background: '#ef4444',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer',
-                                                fontSize: '0.85rem'
-                                            }}
+                                            onClick={() => handleVote(area)}
+                                            className={`vote-btn ${area.userVoted ? 'voted' : ''}`}
                                         >
-                                            🗑️ Delete
+                                            👍 {area.votes}
                                         </button>
                                     </div>
-                                )}
-                            </div>
-                        </Popup>
+
+                                    {isOwner && (
+                                        <div style={{ marginTop: '8px' }}>
+                                            <button
+                                                onClick={() => handleDelete(area.id)}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    background: '#ef4444',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.85rem'
+                                                }}
+                                            >
+                                                🗑️ Delete
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </Popup>
+                        )}
                     </Polygon>
                 );
             })}
