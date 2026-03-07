@@ -1,7 +1,7 @@
 """Pydantic schemas matching the OpenAPI specification."""
 from typing import List, Optional, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
 from app.models import PinColor
 
@@ -43,7 +43,7 @@ class Pin(BaseSchema):
     user_id: str
     created_at: datetime
     votes: int = 0
-    user_voted: bool = False
+    user_vote_value: int = 0  # 0 = no vote, 1 = liked, -1 = disliked
 
 
 # Area Schemas
@@ -74,7 +74,7 @@ class Area(BaseSchema):
     user_id: str
     created_at: datetime
     votes: int = 0
-    user_voted: bool = False
+    user_vote_value: int = 0  # 0 = no vote, 1 = liked, -1 = disliked
 
 
 # Map Data Schema
@@ -116,6 +116,14 @@ class VoteCreate(BaseSchema):
     """Schema for creating a vote."""
     target_type: str = Field(..., pattern="^(pin|area)$")
     target_id: int
+    value: int = Field(default=1, description="1 = like, -1 = dislike")
+
+    @field_validator('value')
+    @classmethod
+    def value_must_be_plus_or_minus_one(cls, v):
+        if v not in (1, -1):
+            raise ValueError('value must be 1 (like) or -1 (dislike)')
+        return v
 
 
 class VoteResponse(BaseSchema):
@@ -124,6 +132,7 @@ class VoteResponse(BaseSchema):
     user_id: str
     target_type: str
     target_id: int
+    value: int
     created_at: datetime
 
 

@@ -118,7 +118,10 @@ const PinInteraction = ({ mode }) => {
                 color: selectedColor,
             });
 
-            setPins(pins.map(p => p.id === editingPin ? updatedPin : p));
+            setPins(pins.map(p => p.id === editingPin
+                ? { ...updatedPin, votes: p.votes, userVoteValue: p.userVoteValue }
+                : p
+            ));
             setEditingPin(null);
             setError(null);
         } catch (err) {
@@ -142,17 +145,23 @@ const PinInteraction = ({ mode }) => {
         }
     };
 
-    const handleVote = async (pin) => {
+    const handleVote = async (pin, value) => {
         try {
-            if (pin.userVoted) {
+            const currentValue = pin.userVoteValue || 0;
+            if (currentValue === value) {
+                // Clicking the same button again removes the vote
                 await api.unvote('pin', pin.id);
                 setPins(pins.map(p =>
-                    p.id === pin.id ? { ...p, votes: p.votes - 1, userVoted: false } : p
+                    p.id === pin.id ? { ...p, votes: p.votes - value, userVoteValue: 0 } : p
                 ));
             } else {
-                await api.vote('pin', pin.id);
+                // If switching from opposite vote, remove old vote first
+                if (currentValue !== 0) {
+                    await api.unvote('pin', pin.id);
+                }
+                await api.vote('pin', pin.id, value);
                 setPins(pins.map(p =>
-                    p.id === pin.id ? { ...p, votes: p.votes + 1, userVoted: true } : p
+                    p.id === pin.id ? { ...p, votes: p.votes - currentValue + value, userVoteValue: value } : p
                 ));
             }
         } catch (error) {
@@ -257,13 +266,22 @@ const PinInteraction = ({ mode }) => {
                                     {new Date(pin.createdAt).toLocaleDateString()}
                                 </small>
 
-                                {/* Vote button and Comments button */}
-                                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {/* Vote buttons and Comments button */}
+                                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <button
-                                        onClick={() => handleVote(pin)}
-                                        className={`action-btn vote-btn ${pin.userVoted ? 'voted' : ''}`}
+                                        onClick={() => handleVote(pin, 1)}
+                                        className={`action-btn vote-btn ${pin.userVoteValue === 1 ? 'voted' : ''}`}
                                     >
-                                        👍 {pin.votes}
+                                        👍
+                                    </button>
+                                    <span style={{ fontWeight: 700, fontSize: '0.9rem', minWidth: '20px', textAlign: 'center', color: pin.votes > 0 ? '#22c55e' : pin.votes < 0 ? '#ef4444' : '#64748b' }}>
+                                        {pin.votes}
+                                    </span>
+                                    <button
+                                        onClick={() => handleVote(pin, -1)}
+                                        className={`action-btn vote-btn dislike-btn ${pin.userVoteValue === -1 ? 'disliked' : ''}`}
+                                    >
+                                        👎
                                     </button>
                                     <button
                                         onClick={() => handleToggleComments(pin.id)}
