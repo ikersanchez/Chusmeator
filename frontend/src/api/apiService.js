@@ -59,6 +59,14 @@ export const api = {
         });
     },
 
+    // Update an existing pin
+    updatePin: async (pinId, pin_data) => {
+        return apiFetch(`/pins/${pinId}`, {
+            method: 'PUT',
+            body: JSON.stringify(pin_data),
+        });
+    },
+
     // Delete a pin
     deletePin: async (pinId) => {
         return apiFetch(`/pins/${pinId}`, {
@@ -71,6 +79,14 @@ export const api = {
         return apiFetch('/areas', {
             method: 'POST',
             body: JSON.stringify(area),
+        });
+    },
+
+    // Update an existing area
+    updateArea: async (areaId, area_data) => {
+        return apiFetch(`/areas/${areaId}`, {
+            method: 'PUT',
+            body: JSON.stringify(area_data),
         });
     },
 

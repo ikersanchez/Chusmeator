@@ -23,6 +23,19 @@ def create_pin(
     return db_pin
 
 
+@router.put("/pins/{pin_id}", response_model=schemas.Pin)
+def update_pin(
+    pin_id: int,
+    pin_data: schemas.PinUpdate,
+    user_id: str = Depends(ensure_user_exists),
+    db: Session = Depends(get_db)
+):
+    """Update an existing pin. Only the owner can edit."""
+    logger.info(f"Updating pin {pin_id} for user {user_id}")
+    db_pin = PinService.update_pin(db, pin_id, user_id, pin_data)
+    return db_pin
+
+
 @router.delete("/pins/{pin_id}", response_model=schemas.SuccessResponse)
 def delete_pin(
     pin_id: int,

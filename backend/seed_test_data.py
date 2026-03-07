@@ -2,7 +2,7 @@
 import httpx
 import time
 
-BASE = "http://localhost/api"
+BASE = "http://localhost:8000/api"
 
 # Fake users for voting
 USERS = [f"seed_user_{i}" for i in range(1, 11)]
