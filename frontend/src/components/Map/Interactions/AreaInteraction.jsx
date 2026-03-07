@@ -361,14 +361,6 @@ const AreaInteraction = ({ mode }) => {
                                     <p><strong>{area.text}</strong></p>
                                     <small>{new Date(area.createdAt).toLocaleDateString()}</small>
 
-<<<<<<< HEAD
-                                    <div style={{ marginTop: '8px' }}>
-                                        <button
-                                            onClick={() => handleVote(area)}
-                                            className={`vote-btn ${area.userVoted ? 'voted' : ''}`}
-                                        >
-                                            👍 {area.votes}
-=======
                                     <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <button
                                             onClick={() => handleVote(area, 1)}
@@ -384,7 +376,6 @@ const AreaInteraction = ({ mode }) => {
                                             className={`vote-btn dislike-btn ${area.userVoteValue === -1 ? 'disliked' : ''}`}
                                         >
                                             👎
->>>>>>> feature/dislike_button
                                         </button>
                                     </div>
 
