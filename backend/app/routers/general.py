@@ -29,8 +29,8 @@ def get_map_data(
     # Vote aggregations
     pin_votes = VoteService.get_vote_counts(db, "pin")
     area_votes = VoteService.get_vote_counts(db, "area")
-    pin_user_votes = VoteService.get_user_votes(db, "pin", user_id)
-    area_user_votes = VoteService.get_user_votes(db, "area", user_id)
+    pin_user_vote_values = VoteService.get_user_vote_values(db, "pin", user_id)
+    area_user_vote_values = VoteService.get_user_vote_values(db, "area", user_id)
 
     # Get all pins
     pins = PinService.get_all_pins(db)
@@ -44,7 +44,7 @@ def get_map_data(
             user_id=pin.user_id,
             created_at=pin.created_at,
             votes=pin_votes.get(pin.id, 0),
-            user_voted=pin.id in pin_user_votes,
+            user_vote_value=pin_user_vote_values.get(pin.id, 0),
         )
         for pin in pins
     ]
@@ -61,7 +61,7 @@ def get_map_data(
             user_id=area.user_id,
             created_at=area.created_at,
             votes=area_votes.get(area.id, 0),
-            user_voted=area.id in area_user_votes,
+            user_vote_value=area_user_vote_values.get(area.id, 0),
         )
         for area in areas
     ]

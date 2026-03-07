@@ -46,6 +46,20 @@ def init_db():
             except Exception as e:
                 logger.warning(f"Migration warning (color column): {e}")
 
+            # Add 'value' column to votes table (default 1 = like)
+            try:
+                check_sql = text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name='votes' AND column_name='value';"
+                )
+                result = conn.execute(check_sql).fetchone()
+                if not result:
+                    conn.execute(text("ALTER TABLE votes ADD COLUMN value INTEGER NOT NULL DEFAULT 1;"))
+                    conn.execute(text("ALTER TABLE votes ADD CONSTRAINT check_vote_value CHECK (value IN (1, -1));"))
+                    logger.info("Migration: Added 'value' column to 'votes' table.")
+            except Exception as e:
+                logger.warning(f"Migration warning (vote value column): {e}")
+
 
 def get_db():
     """Dependency to get database session."""

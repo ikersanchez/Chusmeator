@@ -194,7 +194,10 @@ const AreaInteraction = ({ mode }) => {
 
         try {
             const updatedArea = await api.updateArea(editingArea, updatedAreaPayload);
-            setAreas(areas.map(a => a.id === editingArea ? updatedArea : a));
+            setAreas(areas.map(a => a.id === editingArea
+                ? { ...updatedArea, votes: a.votes, userVoteValue: a.userVoteValue }
+                : a
+            ));
 
             // Cleanup
             setCurrentLayer(null);
@@ -236,17 +239,23 @@ const AreaInteraction = ({ mode }) => {
         }
     };
 
-    const handleVote = async (area) => {
+    const handleVote = async (area, value) => {
         try {
-            if (area.userVoted) {
+            const currentValue = area.userVoteValue || 0;
+            if (currentValue === value) {
+                // Clicking the same button again removes the vote
                 await api.unvote('area', area.id);
                 setAreas(areas.map(a =>
-                    a.id === area.id ? { ...a, votes: a.votes - 1, userVoted: false } : a
+                    a.id === area.id ? { ...a, votes: a.votes - value, userVoteValue: 0 } : a
                 ));
             } else {
-                await api.vote('area', area.id);
+                // If switching from opposite vote, remove old vote first
+                if (currentValue !== 0) {
+                    await api.unvote('area', area.id);
+                }
+                await api.vote('area', area.id, value);
                 setAreas(areas.map(a =>
-                    a.id === area.id ? { ...a, votes: a.votes + 1, userVoted: true } : a
+                    a.id === area.id ? { ...a, votes: a.votes - currentValue + value, userVoteValue: value } : a
                 ));
             }
         } catch (error) {
@@ -352,12 +361,30 @@ const AreaInteraction = ({ mode }) => {
                                     <p><strong>{area.text}</strong></p>
                                     <small>{new Date(area.createdAt).toLocaleDateString()}</small>
 
+<<<<<<< HEAD
                                     <div style={{ marginTop: '8px' }}>
                                         <button
                                             onClick={() => handleVote(area)}
                                             className={`vote-btn ${area.userVoted ? 'voted' : ''}`}
                                         >
                                             👍 {area.votes}
+=======
+                                    <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <button
+                                            onClick={() => handleVote(area, 1)}
+                                            className={`vote-btn ${area.userVoteValue === 1 ? 'voted' : ''}`}
+                                        >
+                                            👍
+                                        </button>
+                                        <span style={{ fontWeight: 700, fontSize: '0.9rem', minWidth: '20px', textAlign: 'center', color: area.votes > 0 ? '#22c55e' : area.votes < 0 ? '#ef4444' : '#64748b' }}>
+                                            {area.votes}
+                                        </span>
+                                        <button
+                                            onClick={() => handleVote(area, -1)}
+                                            className={`vote-btn dislike-btn ${area.userVoteValue === -1 ? 'disliked' : ''}`}
+                                        >
+                                            👎
+>>>>>>> feature/dislike_button
                                         </button>
                                     </div>
 

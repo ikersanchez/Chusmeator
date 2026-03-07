@@ -73,9 +73,11 @@ class VoteModel(Base):
     user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
     target_type = Column(String(10), nullable=False)  # "pin", "area"
     target_id = Column(Integer, nullable=False)
+    value = Column(Integer, nullable=False, default=1)  # +1 = like, -1 = dislike
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         CheckConstraint("target_type IN ('pin', 'area')", name="check_vote_target_type"),
+        CheckConstraint("value IN (1, -1)", name="check_vote_value"),
         UniqueConstraint("user_id", "target_type", "target_id", name="uq_vote"),
     )
