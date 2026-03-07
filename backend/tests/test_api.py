@@ -84,12 +84,13 @@ def test_vote_on_pin():
     assert response.status_code == 201
     pin_id = response.json()["id"]
 
-    # Vote on pin
-    vote_data = {"targetType": "pin", "targetId": pin_id}
+    # Vote on pin (like)
+    vote_data = {"targetType": "pin", "targetId": pin_id, "value": 1}
     response = local_client.post("/api/votes", json=vote_data)
     assert response.status_code == 201
     vote = response.json()
     assert vote["targetType"] == "pin"
+    assert vote["value"] == 1
 
     # Verify vote count in map-data
     response = local_client.get("/api/map-data")
@@ -97,19 +98,19 @@ def test_vote_on_pin():
     data = response.json()
     voted_pin = next(p for p in data["pins"] if p["id"] == pin_id)
     assert voted_pin["votes"] == 1
-    assert voted_pin["userVoted"] is True
+    assert voted_pin["userVoteValue"] == 1
 
     # Duplicate vote should fail with 409
     response = local_client.post("/api/votes", json=vote_data)
     assert response.status_code == 409
 
-    # Another user should see userVoted=False
+    # Another user should see userVoteValue=0
     other_client = TestClient(app)
     response = other_client.get("/api/map-data")
     data = response.json()
     voted_pin = next(p for p in data["pins"] if p["id"] == pin_id)
     assert voted_pin["votes"] == 1
-    assert voted_pin["userVoted"] is False
+    assert voted_pin["userVoteValue"] == 0
 
     # Unvote
     response = local_client.delete(f"/api/votes/pin/{pin_id}")
@@ -120,7 +121,7 @@ def test_vote_on_pin():
     data = response.json()
     voted_pin = next(p for p in data["pins"] if p["id"] == pin_id)
     assert voted_pin["votes"] == 0
-    assert voted_pin["userVoted"] is False
+    assert voted_pin["userVoteValue"] == 0
 
 def test_vote_on_area():
     local_client = TestClient(app)
@@ -135,8 +136,8 @@ def test_vote_on_area():
     assert response.status_code == 201
     area_id = response.json()["id"]
 
-    # Vote
-    response = local_client.post("/api/votes", json={"targetType": "area", "targetId": area_id})
+    # Vote (like)
+    response = local_client.post("/api/votes", json={"targetType": "area", "targetId": area_id, "value": 1})
     assert response.status_code == 201
 
     # Check map-data
@@ -144,10 +145,10 @@ def test_vote_on_area():
     data = response.json()
     area = next(a for a in data["areas"] if a["id"] == area_id)
     assert area["votes"] == 1
-    assert area["userVoted"] is True
+    assert area["userVoteValue"] == 1
 
 def test_vote_on_nonexistent_target():
-    response = client.post("/api/votes", json={"targetType": "pin", "targetId": 999999999})
+    response = client.post("/api/votes", json={"targetType": "pin", "targetId": 999999999, "value": 1})
     assert response.status_code == 404
 
 def test_vote_on_area_new():
@@ -163,10 +164,11 @@ def test_vote_on_area_new():
     area_resp = local_client.post("/api/areas", json=area_data)
     area_id = area_resp.json()["id"]
 
-    # Vote on the area
+    # Vote on the area (like)
     vote_data = {
         "targetType": "area",
-        "targetId": area_id
+        "targetId": area_id,
+        "value": 1
     }
     resp = local_client.post("/api/votes", json=vote_data)
     assert resp.status_code == 201
@@ -175,7 +177,113 @@ def test_vote_on_area_new():
     map_resp = local_client.get("/api/map-data")
     area = next(a for a in map_resp.json()["areas"] if a["id"] == area_id)
     assert area["votes"] == 1
-    assert area["userVoted"] is True
+    assert area["userVoteValue"] == 1
+
+
+def test_dislike_on_pin():
+    """Test disliking a pin (negative vote)."""
+    local_client = TestClient(app)
+    
+    # Create a pin
+    pin_data = {"lat": 40.0, "lng": -3.0, "text": "Dislikable Pin"}
+    response = local_client.post("/api/pins", json=pin_data)
+    assert response.status_code == 201
+    pin_id = response.json()["id"]
+
+    # Dislike the pin
+    vote_data = {"targetType": "pin", "targetId": pin_id, "value": -1}
+    response = local_client.post("/api/votes", json=vote_data)
+    assert response.status_code == 201
+    assert response.json()["value"] == -1
+
+    # Verify negative vote count
+    response = local_client.get("/api/map-data")
+    data = response.json()
+    pin = next(p for p in data["pins"] if p["id"] == pin_id)
+    assert pin["votes"] == -1
+    assert pin["userVoteValue"] == -1
+
+    # Undislike
+    response = local_client.delete(f"/api/votes/pin/{pin_id}")
+    assert response.status_code == 200
+
+    # Verify vote removed
+    response = local_client.get("/api/map-data")
+    data = response.json()
+    pin = next(p for p in data["pins"] if p["id"] == pin_id)
+    assert pin["votes"] == 0
+    assert pin["userVoteValue"] == 0
+
+
+def test_like_then_switch_to_dislike():
+    """Test switching from like to dislike (requires unvote + revote)."""
+    local_client = TestClient(app)
+    
+    # Create a pin
+    pin_data = {"lat": 41.0, "lng": -4.0, "text": "Switchable Pin"}
+    response = local_client.post("/api/pins", json=pin_data)
+    assert response.status_code == 201
+    pin_id = response.json()["id"]
+
+    # Like the pin
+    response = local_client.post("/api/votes", json={"targetType": "pin", "targetId": pin_id, "value": 1})
+    assert response.status_code == 201
+
+    # Verify like
+    response = local_client.get("/api/map-data")
+    pin = next(p for p in response.json()["pins"] if p["id"] == pin_id)
+    assert pin["votes"] == 1
+    assert pin["userVoteValue"] == 1
+
+    # Unvote first, then dislike (simulates frontend behavior)
+    response = local_client.delete(f"/api/votes/pin/{pin_id}")
+    assert response.status_code == 200
+
+    response = local_client.post("/api/votes", json={"targetType": "pin", "targetId": pin_id, "value": -1})
+    assert response.status_code == 201
+
+    # Verify dislike
+    response = local_client.get("/api/map-data")
+    pin = next(p for p in response.json()["pins"] if p["id"] == pin_id)
+    assert pin["votes"] == -1
+    assert pin["userVoteValue"] == -1
+
+
+def test_multiple_users_voting():
+    """Test that likes and dislikes from multiple users sum correctly."""
+    client1 = TestClient(app)
+    client2 = TestClient(app)
+    client3 = TestClient(app)
+
+    # Create a pin
+    pin_data = {"lat": 42.0, "lng": -5.0, "text": "Multi-vote Pin"}
+    response = client1.post("/api/pins", json=pin_data)
+    assert response.status_code == 201
+    pin_id = response.json()["id"]
+
+    # User 1 likes
+    response = client1.post("/api/votes", json={"targetType": "pin", "targetId": pin_id, "value": 1})
+    assert response.status_code == 201
+
+    # User 2 likes
+    response = client2.post("/api/votes", json={"targetType": "pin", "targetId": pin_id, "value": 1})
+    assert response.status_code == 201
+
+    # User 3 dislikes
+    response = client3.post("/api/votes", json={"targetType": "pin", "targetId": pin_id, "value": -1})
+    assert response.status_code == 201
+
+    # Total should be 1 + 1 + (-1) = 1
+    response = client1.get("/api/map-data")
+    pin = next(p for p in response.json()["pins"] if p["id"] == pin_id)
+    assert pin["votes"] == 1
+    assert pin["userVoteValue"] == 1  # User 1 liked
+
+    # User 3 should see their dislike
+    response = client3.get("/api/map-data")
+    pin = next(p for p in response.json()["pins"] if p["id"] == pin_id)
+    assert pin["votes"] == 1
+    assert pin["userVoteValue"] == -1  # User 3 disliked
 
 
 def test_pin_comments():

@@ -104,11 +104,11 @@ export const api = {
         return results;
     },
 
-    // Vote on a pin or area
-    vote: async (targetType, targetId) => {
+    // Vote on a pin or area (value: 1 = like, -1 = dislike)
+    vote: async (targetType, targetId, value = 1) => {
         return apiFetch('/votes', {
             method: 'POST',
-            body: JSON.stringify({ targetType, targetId }),
+            body: JSON.stringify({ targetType, targetId, value }),
         });
     },
 
