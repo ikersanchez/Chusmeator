@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Marker, Popup, Tooltip, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { api } from '../../../api/apiService';
@@ -33,6 +33,7 @@ const VOTE_THRESHOLD_PERMANENT_LABEL = 5;
 
 const PinInteraction = ({ mode }) => {
     const [newPin, setNewPin] = useState(null);
+    const [editingPin, setEditingPin] = useState(null); // ID of pin being edited
     const [pins, setPins] = useState([]);
     const [formData, setFormData] = useState('');
     const [selectedColor, setSelectedColor] = useState('blue');
@@ -44,6 +45,17 @@ const PinInteraction = ({ mode }) => {
     const [pinComments, setPinComments] = useState({});
     const [newCommentText, setNewCommentText] = useState('');
     const [loadingComments, setLoadingComments] = useState(false);
+
+    // Ref for stopping leaflet propagation
+    const modalRef = useRef(null);
+
+    // Stop propagation on Modal
+    useEffect(() => {
+        if (modalRef.current) {
+            L.DomEvent.disableClickPropagation(modalRef.current);
+            L.DomEvent.disableScrollPropagation(modalRef.current);
+        }
+    }, [newPin, editingPin]);
 
     // Load existing pins and user ID on mount
     useEffect(() => {
@@ -61,7 +73,7 @@ const PinInteraction = ({ mode }) => {
         click(e) {
             // FIX: If newPin already exists, don't drop a new one or reset form.
             // This prevented saving on mobile when clicks leaked through.
-            if (mode !== 'PIN' || newPin) return;
+            if (mode !== 'PIN' || newPin || editingPin) return;
 
             setNewPin({
                 lat: e.latlng.lat,
@@ -93,8 +105,31 @@ const PinInteraction = ({ mode }) => {
         }
     };
 
+    const handleUpdate = async (e) => {
+        if (e) e.preventDefault();
+        if (!editingPin || !formData.trim()) return;
+
+        try {
+            const pinToUpdate = pins.find(p => p.id === editingPin);
+            const updatedPin = await api.updatePin(editingPin, {
+                lat: pinToUpdate.lat,
+                lng: pinToUpdate.lng,
+                text: formData,
+                color: selectedColor,
+            });
+
+            setPins(pins.map(p => p.id === editingPin ? updatedPin : p));
+            setEditingPin(null);
+            setError(null);
+        } catch (err) {
+            console.error('Update pin error:', err);
+            setError(err.message || 'Failed to update pin.');
+        }
+    };
+
     const handleCancel = () => {
         setNewPin(null);
+        setEditingPin(null);
         setError(null);
     };
 
@@ -196,7 +231,7 @@ const PinInteraction = ({ mode }) => {
                     <Marker
                         key={pin.id}
                         position={[pin.lat, pin.lng]}
-                        icon={createColoredIcon(pin.color)}
+                        icon={createColoredIcon(pin.id === editingPin ? selectedColor : pin.color)}
                     >
                         {/* Show permanent tooltip for highly-voted pins */}
                         {showPermanentLabel && (
@@ -253,6 +288,25 @@ const PinInteraction = ({ mode }) => {
                                             }}
                                         >
                                             🗑️ Delete
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setEditingPin(pin.id);
+                                                setFormData(pin.text);
+                                                setSelectedColor(pin.color);
+                                            }}
+                                            style={{
+                                                padding: '4px 8px',
+                                                background: '#3b82f6',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.85rem',
+                                                marginLeft: '8px'
+                                            }}
+                                        >
+                                            ✏️ Edit
                                         </button>
                                     </div>
                                 )}
@@ -331,14 +385,13 @@ const PinInteraction = ({ mode }) => {
                 );
             })}
 
-            {/* Temporary pin being created — use bottom sheet style — compact for mobile */}
-            {newPin && (
+            {/* Temporary pin being created or Pin being edited — use bottom sheet style — compact for mobile */}
+            {(newPin || editingPin) && (
                 <>
-                    <Marker position={[newPin.lat, newPin.lng]} icon={createColoredIcon(selectedColor)} />
+                    {newPin && <Marker position={[newPin.lat, newPin.lng]} icon={createColoredIcon(selectedColor)} />}
 
                     <div
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
+                        ref={modalRef}
                         style={{
                             position: 'fixed',
                             bottom: 0,
@@ -363,7 +416,9 @@ const PinInteraction = ({ mode }) => {
                             borderRadius: '2px',
                             margin: '0 auto 12px',
                         }} />
-                        <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 700 }}>Add Pin</h3>
+                        <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 700 }}>
+                            {editingPin ? 'Edit Pin' : 'Add Pin'}
+                        </h3>
 
                         {error && (
                             <div style={{
@@ -379,7 +434,7 @@ const PinInteraction = ({ mode }) => {
                             </div>
                         )}
 
-                        <form onSubmit={handleSave}>
+                        <form onSubmit={editingPin ? handleUpdate : handleSave}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
                                     Color
@@ -451,7 +506,7 @@ const PinInteraction = ({ mode }) => {
                                         boxShadow: !formData.trim() ? 'none' : '0 2px 10px rgba(59,130,246,0.3)',
                                     }}
                                 >
-                                    Save Pin
+                                    {editingPin ? 'Save Changes' : 'Save Pin'}
                                 </button>
                             </div>
                         </form>

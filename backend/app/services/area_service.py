@@ -84,6 +84,25 @@ class AreaService:
         return db.query(AreaModel).all()
 
     @staticmethod
+    def update_area(db: Session, area_id: int, user_id: str, update_data: schemas.AreaUpdate) -> AreaModel:
+        area = db.query(AreaModel).filter(AreaModel.id == area_id).first()
+        if not area:
+            raise HTTPException(status_code=404, detail="Area not found")
+        if area.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized: You can only edit your own areas")
+            
+        update_dict = update_data.model_dump(exclude_unset=True)
+        for key, value in update_dict.items():
+            if key == 'color' and hasattr(value, 'value'):
+                setattr(area, key, value.value)
+            else:
+                setattr(area, key, value)
+                
+        db.commit()
+        db.refresh(area)
+        return area
+
+    @staticmethod
     def delete_area(db: Session, area_id: int, user_id: str) -> bool:
         area = db.query(AreaModel).filter(AreaModel.id == area_id).first()
         if not area:

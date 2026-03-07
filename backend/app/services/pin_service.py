@@ -39,6 +39,25 @@ class PinService:
         return db.query(PinModel).all()
 
     @staticmethod
+    def update_pin(db: Session, pin_id: int, user_id: str, update_data: schemas.PinUpdate) -> PinModel:
+        pin = db.query(PinModel).filter(PinModel.id == pin_id).first()
+        if not pin:
+            raise HTTPException(status_code=404, detail="Pin not found")
+        if pin.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized: You can only edit your own pins")
+        
+        update_dict = update_data.model_dump(exclude_unset=True)
+        for key, value in update_dict.items():
+            if key == 'color' and hasattr(value, 'value'):
+                setattr(pin, key, value.value)
+            else:
+                setattr(pin, key, value)
+                
+        db.commit()
+        db.refresh(pin)
+        return pin
+
+    @staticmethod
     def delete_pin(db: Session, pin_id: int, user_id: str) -> bool:
         pin = db.query(PinModel).filter(PinModel.id == pin_id).first()
         if not pin:

@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FeatureGroup, Polygon, Polyline, CircleMarker, Tooltip, Popup, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import { api } from '../../../api/apiService';
 import * as turf from '@turf/turf';
 
 const AreaInteraction = ({ mode }) => {
     const [areas, setAreas] = useState([]);
     const [currentLayer, setCurrentLayer] = useState(null);
+    const [editingArea, setEditingArea] = useState(null); // ID of area being edited
     const [color, setColor] = useState('blue');
     const [text, setText] = useState('');
     const [isDrawing, setIsDrawing] = useState(false);
@@ -18,6 +20,22 @@ const AreaInteraction = ({ mode }) => {
 
     const [currentUserId, setCurrentUserId] = useState('');
     const map = useMap();
+    
+    // Refs for stopping leaflet propagation
+    const hudRef = useRef(null);
+    const modalRef = useRef(null);
+
+    // Stop propagation on HUD and Modal
+    useEffect(() => {
+        if (hudRef.current) {
+            L.DomEvent.disableClickPropagation(hudRef.current);
+            L.DomEvent.disableScrollPropagation(hudRef.current);
+        }
+        if (modalRef.current) {
+            L.DomEvent.disableClickPropagation(modalRef.current);
+            L.DomEvent.disableScrollPropagation(modalRef.current);
+        }
+    }, [isManualDrawing, isDrawing, currentLayer, editingArea]);
 
     // Load existing areas and user ID on mount
     useEffect(() => {
@@ -73,7 +91,7 @@ const AreaInteraction = ({ mode }) => {
     // Handle map clicks for manual drawing
     useMapEvents({
         click(e) {
-            if (mode !== 'AREA' || !isManualDrawing || isDrawing) return;
+            if (mode !== 'AREA' || !isManualDrawing || isDrawing || editingArea) return;
 
             // Check proximity to start point if we have at least 3 points
             if (drawPoints.length >= 3) {
@@ -162,6 +180,35 @@ const AreaInteraction = ({ mode }) => {
         }
     };
 
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        setError(null);
+        if (!editingArea || !text) return;
+
+        const areaToUpdate = areas.find(a => a.id === editingArea);
+        
+        const updatedAreaPayload = {
+            color,
+            text
+        };
+
+        try {
+            const updatedArea = await api.updateArea(editingArea, updatedAreaPayload);
+            setAreas(areas.map(a => a.id === editingArea ? updatedArea : a));
+
+            // Cleanup
+            setCurrentLayer(null);
+            setIsDrawing(false);
+            setEditingArea(null);
+            setDrawPoints([]);
+            setText('');
+            setError(null);
+        } catch (err) {
+            console.error('Update area error:', err);
+            setError(err.message || 'Failed to update area.');
+        }
+    };
+
     const handleCancel = () => {
         if (currentLayer && !Array.isArray(currentLayer) && currentLayer.remove) {
             currentLayer.remove();
@@ -170,11 +217,15 @@ const AreaInteraction = ({ mode }) => {
         setIsDrawing(false);
         setDrawPoints([]);
         setText('');
+        setEditingArea(null);
+        setError(null);
         // Re-enter drawing mode
         if (mode === 'AREA') {
             setIsManualDrawing(true);
         }
     };
+
+
 
     const handleDelete = async (areaId) => {
         try {
@@ -288,13 +339,14 @@ const AreaInteraction = ({ mode }) => {
                                 className="map-label-style"
                                 style={{
                                     fontSize: getVoteFontSize(area),
+                                    opacity: editingArea === area.id ? 0.3 : 1
                                 }}
                             >
                                 {area.text}
                             </div>
                         </Tooltip>
 
-                        {mode !== 'PIN' && (
+                        {mode !== 'PIN' && editingArea !== area.id && (
                             <Popup>
                                 <div>
                                     <p><strong>{area.text}</strong></p>
@@ -324,6 +376,26 @@ const AreaInteraction = ({ mode }) => {
                                                 }}
                                             >
                                                 🗑️ Delete
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingArea(area.id);
+                                                    setText(area.text);
+                                                    setColor(area.color);
+                                                    setCurrentLayer(area.latlngs);
+                                                }}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    background: '#3b82f6',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.85rem',
+                                                    marginLeft: '8px'
+                                                }}
+                                            >
+                                                ✏️ Edit
                                             </button>
                                         </div>
                                     )}
@@ -367,8 +439,8 @@ const AreaInteraction = ({ mode }) => {
                 </CircleMarker>
             ))}
 
-            {/* In-progress drawing preview for finalized polygon */}
-            {isDrawing && Array.isArray(currentLayer) && (
+            {/* In-progress drawing preview for finalized polygon OR editing area polygon */}
+            {(isDrawing && Array.isArray(currentLayer) || editingArea && currentLayer) && (
                 <Polygon
                     positions={currentLayer}
                     pathOptions={{ color: '#3b82f6', fillOpacity: 0.3 }}
@@ -378,8 +450,7 @@ const AreaInteraction = ({ mode }) => {
             {/* ─── Drawing HUD (bottom bar while tapping points) ─── */}
             {isManualDrawing && (
                 <div
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
+                    ref={hudRef}
                     style={{
                         position: 'fixed',
                         bottom: '80px',
@@ -449,10 +520,9 @@ const AreaInteraction = ({ mode }) => {
             )}
 
             {/* ─── Configuration Modal for new area (modern bottom sheet style on mobile) ─── */}
-            {isDrawing && currentLayer && (
+            {((isDrawing && currentLayer) || editingArea) && (
                 <div
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
+                    ref={modalRef}
                     style={{
                         position: 'fixed',
                         bottom: 0,
@@ -477,7 +547,11 @@ const AreaInteraction = ({ mode }) => {
                         borderRadius: '2px',
                         margin: '0 auto 12px',
                     }} />
-                    <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 700 }}>Configure Area</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+                            {editingArea ? 'Edit Area' : 'Configure Area'}
+                        </h3>
+                    </div>
 
                     {error && (
                         <div style={{
@@ -493,7 +567,7 @@ const AreaInteraction = ({ mode }) => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSave}>
+                    <form onSubmit={editingArea ? handleUpdate : handleSave}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                             <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
                                 Color
@@ -562,7 +636,7 @@ const AreaInteraction = ({ mode }) => {
                                     boxShadow: (!!error && !error.includes('Warning')) ? 'none' : '0 2px 10px rgba(59,130,246,0.3)',
                                 }}
                             >
-                                Save Area
+                                {editingArea ? 'Save Changes' : 'Save Area'}
                             </button>
                         </div>
                     </form>

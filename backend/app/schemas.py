@@ -24,6 +24,15 @@ class PinCreate(BaseModel):
     color: PinColor = PinColor.BLUE
 
 
+class PinUpdate(BaseModel):
+    """Schema for updating an existing pin."""
+    lat: Optional[float] = Field(None, description="Latitude coordinate")
+    lng: Optional[float] = Field(None, description="Longitude coordinate")
+    text: Optional[str] = Field(None, max_length=100, description="Pin description text")
+    color: Optional[PinColor] = None
+
+
+
 class Pin(BaseSchema):
     """Schema for a pin response."""
     id: int
@@ -44,6 +53,15 @@ class AreaCreate(BaseSchema):
     color: PinColor
     text: str = Field(..., max_length=100)
     font_size: str
+
+
+class AreaUpdate(BaseSchema):
+    """Schema for updating an existing area."""
+    latlngs: Optional[List[Any]] = None
+    color: Optional[PinColor] = None
+    text: Optional[str] = Field(None, max_length=100)
+    font_size: Optional[str] = None
+
 
 
 class Area(BaseSchema):
