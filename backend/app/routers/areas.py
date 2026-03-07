@@ -29,6 +29,25 @@ def create_area(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.put("/areas/{area_id}", response_model=schemas.Area)
+def update_area(
+    area_id: int,
+    area_data: schemas.AreaUpdate,
+    user_id: str = Depends(ensure_user_exists),
+    db: Session = Depends(get_db)
+):
+    """Update an existing area. Only the owner can edit."""
+    try:
+        logger.info(f"Updating area {area_id} for user {user_id}")
+        db_area = AreaService.update_area(db, area_id, user_id, area_data)
+        return db_area
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"ERROR updating area: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/areas/{area_id}", response_model=schemas.SuccessResponse)
 def delete_area(
     area_id: int,
