@@ -20,7 +20,8 @@ router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 class AdminComment(BaseModel):
     id: int
-    pinId: int
+    targetType: str
+    targetId: int
     userId: str
     text: str
     createdAt: datetime
@@ -83,21 +84,24 @@ def require_admin(x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key")
 
 @router.get("/comments", response_model=List[AdminComment], dependencies=[Depends(require_admin)])
 def list_all_comments(
-    pin_id: Optional[int] = None,
+    target_type: Optional[str] = None,
+    target_id: Optional[int] = None,
     user_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """List all comments. Optionally filter by pin_id or user_id."""
+    """List all comments. Optionally filter by target_type, target_id, or user_id."""
     q = db.query(CommentModel)
-    if pin_id is not None:
-        q = q.filter(CommentModel.pin_id == pin_id)
+    if target_type is not None:
+        q = q.filter(CommentModel.target_type == target_type)
+    if target_id is not None:
+        q = q.filter(CommentModel.target_id == target_id)
     if user_id is not None:
         q = q.filter(CommentModel.user_id == user_id)
     comments = q.order_by(CommentModel.created_at.desc()).all()
     return [
         AdminComment(
-            id=c.id, pinId=c.pin_id, userId=c.user_id,
-            text=c.text, createdAt=c.created_at
+            id=c.id, targetType=c.target_type, targetId=c.target_id,
+            userId=c.user_id, text=c.text, createdAt=c.created_at
         ) for c in comments
     ]
 
@@ -135,7 +139,7 @@ def force_delete_pin(pin_id: int, db: Session = Depends(get_db)):
     if not pin:
         raise HTTPException(status_code=404, detail="Pin not found")
     # Delete dependent comments and votes first
-    db.query(CommentModel).filter(CommentModel.pin_id == pin_id).delete()
+    db.query(CommentModel).filter(CommentModel.target_type == "pin", CommentModel.target_id == pin_id).delete()
     db.delete(pin)
     db.commit()
     return DeletedResponse(success=True, deleted_id=pin_id)
@@ -158,11 +162,14 @@ def list_all_areas(user_id: Optional[str] = None, db: Session = Depends(get_db))
 
 @router.delete("/areas/{area_id}", response_model=DeletedResponse, dependencies=[Depends(require_admin)])
 def force_delete_area(area_id: int, db: Session = Depends(get_db)):
-    """Force-delete any area by ID (including its votes)."""
+    """Force-delete any area by ID (including its comments and votes)."""
     from app.models import VoteModel
     area = db.query(AreaModel).filter(AreaModel.id == area_id).first()
     if not area:
         raise HTTPException(status_code=404, detail="Area not found")
+    db.query(CommentModel).filter(
+        CommentModel.target_type == "area", CommentModel.target_id == area_id
+    ).delete()
     db.query(VoteModel).filter(
         VoteModel.target_type == "area", VoteModel.target_id == area_id
     ).delete()

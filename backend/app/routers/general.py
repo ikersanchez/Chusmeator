@@ -10,6 +10,7 @@ from app.config import settings
 from app.services.pin_service import PinService
 from app.services.area_service import AreaService
 from app.services.vote_service import VoteService
+from app.services.comment_service import CommentService
 
 router = APIRouter(prefix="/api", tags=["General"])
 
@@ -32,6 +33,10 @@ def get_map_data(
     pin_user_vote_values = VoteService.get_user_vote_values(db, "pin", user_id)
     area_user_vote_values = VoteService.get_user_vote_values(db, "area", user_id)
 
+    # Comment counts
+    pin_comments = CommentService.get_comment_counts(db, "pin")
+    area_comments = CommentService.get_comment_counts(db, "area")
+
     # Get all pins
     pins = PinService.get_all_pins(db)
     pin_list = [
@@ -45,6 +50,7 @@ def get_map_data(
             created_at=pin.created_at,
             votes=pin_votes.get(pin.id, 0),
             user_vote_value=pin_user_vote_values.get(pin.id, 0),
+            comment_count=pin_comments.get(pin.id, 0),
         )
         for pin in pins
     ]
@@ -62,6 +68,7 @@ def get_map_data(
             created_at=area.created_at,
             votes=area_votes.get(area.id, 0),
             user_vote_value=area_user_vote_values.get(area.id, 0),
+            comment_count=area_comments.get(area.id, 0),
         )
         for area in areas
     ]

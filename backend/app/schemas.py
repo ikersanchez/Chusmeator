@@ -44,6 +44,7 @@ class Pin(BaseSchema):
     created_at: datetime
     votes: int = 0
     user_vote_value: int = 0  # 0 = no vote, 1 = liked, -1 = disliked
+    comment_count: int = 0
 
 
 # Area Schemas
@@ -75,6 +76,7 @@ class Area(BaseSchema):
     created_at: datetime
     votes: int = 0
     user_vote_value: int = 0  # 0 = no vote, 1 = liked, -1 = disliked
+    comment_count: int = 0
 
 
 # Map Data Schema
@@ -145,7 +147,8 @@ class CommentCreate(BaseModel):
 class Comment(BaseSchema):
     """Schema for a comment response."""
     id: int
-    pin_id: int
+    target_type: str
+    target_id: int
     user_id: str
     text: str
     created_at: datetime

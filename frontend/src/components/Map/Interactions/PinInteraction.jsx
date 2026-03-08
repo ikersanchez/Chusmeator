@@ -119,7 +119,7 @@ const PinInteraction = ({ mode }) => {
             });
 
             setPins(pins.map(p => p.id === editingPin
-                ? { ...updatedPin, votes: p.votes, userVoteValue: p.userVoteValue }
+                ? { ...updatedPin, votes: p.votes, userVoteValue: p.userVoteValue, commentCount: p.commentCount }
                 : p
             ));
             setEditingPin(null);
@@ -203,6 +203,14 @@ const PinInteraction = ({ mode }) => {
                 ...prev,
                 [pinId]: [addedComment, ...(prev[pinId] || [])]
             }));
+            
+            // Increment comment counter without refreshing
+            setPins(prevPins => prevPins.map(p => 
+                p.id === pinId 
+                    ? { ...p, commentCount: (p.commentCount || 0) + 1 } 
+                    : p
+            ));
+            
             setNewCommentText('');
         } catch (error) {
             console.error('Error adding comment:', error);
@@ -287,7 +295,7 @@ const PinInteraction = ({ mode }) => {
                                         onClick={() => handleToggleComments(pin.id)}
                                         className="action-btn comment-btn"
                                     >
-                                        💬 Comments
+                                        💬 Comments {pin.commentCount > 0 && `(${pin.commentCount})`}
                                     </button>
                                 </div>
 

@@ -55,14 +55,19 @@ class AreaModel(Base):
 
 
 class CommentModel(Base):
-    """Comment model for pins."""
+    """Comment model for pins and areas."""
     __tablename__ = "comments"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    pin_id = Column(Integer, ForeignKey("pins.id"), nullable=False)
+    target_type = Column(String(10), nullable=False)  # "pin", "area"
+    target_id = Column(Integer, nullable=False)
     user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
     text = Column(String(100), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        CheckConstraint("target_type IN ('pin', 'area')", name="check_comment_target_type"),
+    )
 
 
 class VoteModel(Base):
