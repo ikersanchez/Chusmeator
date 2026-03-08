@@ -45,6 +45,7 @@ const PinInteraction = ({ mode }) => {
     const [pinComments, setPinComments] = useState({});
     const [newCommentText, setNewCommentText] = useState('');
     const [loadingComments, setLoadingComments] = useState(false);
+    const [commentError, setCommentError] = useState(null);
 
     // Ref for stopping leaflet propagation
     const modalRef = useRef(null);
@@ -119,7 +120,7 @@ const PinInteraction = ({ mode }) => {
             });
 
             setPins(pins.map(p => p.id === editingPin
-                ? { ...updatedPin, votes: p.votes, userVoteValue: p.userVoteValue }
+                ? { ...updatedPin, votes: p.votes, userVoteValue: p.userVoteValue, commentCount: p.commentCount }
                 : p
             ));
             setEditingPin(null);
@@ -179,6 +180,7 @@ const PinInteraction = ({ mode }) => {
         // Open comments and fetch
         setCommentsVisibleForPin(pinId);
         setNewCommentText('');
+        setCommentError(null);
 
         if (!pinComments[pinId]) {
             setLoadingComments(true);
@@ -203,9 +205,19 @@ const PinInteraction = ({ mode }) => {
                 ...prev,
                 [pinId]: [addedComment, ...(prev[pinId] || [])]
             }));
+            
+            // Increment comment counter without refreshing
+            setPins(prevPins => prevPins.map(p => 
+                p.id === pinId 
+                    ? { ...p, commentCount: (p.commentCount || 0) + 1 } 
+                    : p
+            ));
+            
             setNewCommentText('');
+            setCommentError(null);
         } catch (error) {
             console.error('Error adding comment:', error);
+            setCommentError(error.message || 'Failed to post comment.');
         }
     };
 
@@ -287,7 +299,7 @@ const PinInteraction = ({ mode }) => {
                                         onClick={() => handleToggleComments(pin.id)}
                                         className="action-btn comment-btn"
                                     >
-                                        💬 Comments
+                                        💬 Comments {pin.commentCount > 0 && `(${pin.commentCount})`}
                                     </button>
                                 </div>
 
@@ -356,6 +368,20 @@ const PinInteraction = ({ mode }) => {
                                                 <div style={{ fontSize: '0.8rem', color: '#666', textAlign: 'center', margin: '10px 0' }}>No comments yet.</div>
                                             )}
                                         </div>
+
+                                        {commentError && (
+                                            <div style={{
+                                                padding: '6px 8px',
+                                                marginBottom: '8px',
+                                                background: '#fef2f2',
+                                                color: '#b91c1c',
+                                                border: '1px solid #fecaca',
+                                                borderRadius: '6px',
+                                                fontSize: '0.75rem'
+                                            }}>
+                                                {commentError}
+                                            </div>
+                                        )}
 
                                         <form onSubmit={(e) => handleAddComment(e, pin.id)} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                             <input

@@ -19,6 +19,14 @@ const AreaInteraction = ({ mode }) => {
     const [isManualDrawing, setIsManualDrawing] = useState(false);
 
     const [currentUserId, setCurrentUserId] = useState('');
+
+    // Comments state
+    const [commentsVisibleForArea, setCommentsVisibleForArea] = useState(null);
+    const [areaComments, setAreaComments] = useState({});
+    const [newCommentText, setNewCommentText] = useState('');
+    const [loadingComments, setLoadingComments] = useState(false);
+    const [commentError, setCommentError] = useState(null);
+
     const map = useMap();
     
     // Refs for stopping leaflet propagation
@@ -195,7 +203,7 @@ const AreaInteraction = ({ mode }) => {
         try {
             const updatedArea = await api.updateArea(editingArea, updatedAreaPayload);
             setAreas(areas.map(a => a.id === editingArea
-                ? { ...updatedArea, votes: a.votes, userVoteValue: a.userVoteValue }
+                ? { ...updatedArea, votes: a.votes, userVoteValue: a.userVoteValue, commentCount: a.commentCount }
                 : a
             ));
 
@@ -260,6 +268,55 @@ const AreaInteraction = ({ mode }) => {
             }
         } catch (error) {
             console.error('Vote error:', error);
+        }
+    };
+
+    const handleToggleComments = async (areaId) => {
+        if (commentsVisibleForArea === areaId) {
+            setCommentsVisibleForArea(null);
+            return;
+        }
+
+        setCommentsVisibleForArea(areaId);
+        setNewCommentText('');
+        setCommentError(null);
+
+        if (!areaComments[areaId]) {
+            setLoadingComments(true);
+            try {
+                const comments = await api.getAreaComments(areaId);
+                setAreaComments(prev => ({ ...prev, [areaId]: comments }));
+            } catch (error) {
+                console.error('Error fetching comments:', error);
+            } finally {
+                setLoadingComments(false);
+            }
+        }
+    };
+
+    const handleAddComment = async (e, areaId) => {
+        e.preventDefault();
+        if (!newCommentText.trim() || newCommentText.length > 100) return;
+
+        try {
+            const addedComment = await api.addAreaComment(areaId, newCommentText);
+            setAreaComments(prev => ({
+                ...prev,
+                [areaId]: [addedComment, ...(prev[areaId] || [])]
+            }));
+            
+            // Increment comment counter without refreshing
+            setAreas(prevAreas => prevAreas.map(a => 
+                a.id === areaId 
+                    ? { ...a, commentCount: (a.commentCount || 0) + 1 } 
+                    : a
+            ));
+            
+            setNewCommentText('');
+            setCommentError(null);
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            setCommentError(error.message || 'Failed to post comment.');
         }
     };
 
@@ -377,6 +434,12 @@ const AreaInteraction = ({ mode }) => {
                                         >
                                             👎
                                         </button>
+                                        <button
+                                            onClick={() => handleToggleComments(area.id)}
+                                            className="action-btn comment-btn"
+                                        >
+                                            💬 Comments {area.commentCount > 0 && `(${area.commentCount})`}
+                                        </button>
                                     </div>
 
                                     {isOwner && (
@@ -417,6 +480,89 @@ const AreaInteraction = ({ mode }) => {
                                             </button>
                                         </div>
                                     )}
+
+                                {/* Comments Section */}
+                                {commentsVisibleForArea === area.id && (
+                                    <div className="comments-section" style={{ marginTop: '12px', borderTop: '1px solid #eee', paddingTop: '8px' }}>
+                                        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem' }}>Comments</h4>
+
+                                        <div className="comments-list" style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '8px' }}>
+                                            {loadingComments ? (
+                                                <div style={{ fontSize: '0.8rem', color: '#666', textAlign: 'center' }}>Loading...</div>
+                                            ) : areaComments[area.id]?.length > 0 ? (
+                                                areaComments[area.id].map(comment => (
+                                                    <div key={comment.id} style={{
+                                                        background: '#f9fafb',
+                                                        padding: '6px 8px',
+                                                        borderRadius: '6px',
+                                                        marginBottom: '6px',
+                                                        fontSize: '0.85rem'
+                                                    }}>
+                                                        <div style={{ wordBreak: 'break-word' }}>{comment.text}</div>
+                                                        <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '2px', textAlign: 'right' }}>
+                                                            {new Date(comment.createdAt).toLocaleDateString()} {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div style={{ fontSize: '0.8rem', color: '#666', textAlign: 'center', margin: '10px 0' }}>No comments yet.</div>
+                                            )}
+                                        </div>
+
+                                        {commentError && (
+                                            <div style={{
+                                                padding: '6px 8px',
+                                                marginBottom: '8px',
+                                                background: '#fef2f2',
+                                                color: '#b91c1c',
+                                                border: '1px solid #fecaca',
+                                                borderRadius: '6px',
+                                                fontSize: '0.75rem'
+                                            }}>
+                                                {commentError}
+                                            </div>
+                                        )}
+
+                                        <form onSubmit={(e) => handleAddComment(e, area.id)} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <input
+                                                type="text"
+                                                value={newCommentText}
+                                                onChange={(e) => setNewCommentText(e.target.value)}
+                                                placeholder="Write a comment..."
+                                                maxLength={100}
+                                                style={{
+                                                    padding: '8px 12px',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid #cbd5e1',
+                                                    fontSize: '16px',
+                                                    outline: 'none',
+                                                }}
+                                            />
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.7rem', color: newCommentText.length >= 100 ? '#ef4444' : '#9ca3af' }}>
+                                                    {newCommentText.length}/100
+                                                </span>
+                                                <button
+                                                    type="submit"
+                                                    disabled={!newCommentText.trim() || newCommentText.length > 100}
+                                                    style={{
+                                                        padding: '4px 10px',
+                                                        background: 'var(--accent)',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '6px',
+                                                        cursor: !newCommentText.trim() || newCommentText.length > 100 ? 'not-allowed' : 'pointer',
+                                                        fontSize: '0.85rem',
+                                                        opacity: !newCommentText.trim() || newCommentText.length > 100 ? 0.5 : 1,
+                                                        fontWeight: '600',
+                                                    }}
+                                                >
+                                                    Post
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
                                 </div>
                             </Popup>
                         )}

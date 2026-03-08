@@ -131,4 +131,17 @@ export const api = {
             body: JSON.stringify({ text }),
         });
     },
+
+    // Get comments for an area
+    getAreaComments: async (areaId) => {
+        return apiFetch(`/areas/${areaId}/comments`);
+    },
+
+    // Add a comment to an area
+    addAreaComment: async (areaId, text) => {
+        return apiFetch(`/areas/${areaId}/comments`, {
+            method: 'POST',
+            body: JSON.stringify({ text }),
+        });
+    },
 };

@@ -29,7 +29,7 @@ def init_db():
     # Only runs on PostgreSQL (information_schema is not available in SQLite).
     if not settings.database_url.startswith("sqlite"):
         from sqlalchemy import text
-        with engine.begin() as conn:
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             try:
                 check_sql = text(
                     "SELECT column_name FROM information_schema.columns "
@@ -55,6 +55,51 @@ def init_db():
                     logger.info("Migration: Added 'value' column to 'votes' table.")
             except Exception as e:
                 logger.warning(f"Migration warning (vote value column): {e}")
+
+            # Migrate comments table from pin_id to target_type/target_id
+            try:
+                # Add target_type
+                check_sql = text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name='comments' AND column_name='target_type';"
+                )
+                if not conn.execute(check_sql).fetchone():
+                    conn.execute(text("ALTER TABLE comments ADD COLUMN target_type VARCHAR(10) NOT NULL DEFAULT 'pin';"))
+
+                # Add target_id
+                check_sql2 = text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name='comments' AND column_name='target_id';"
+                )
+                if not conn.execute(check_sql2).fetchone():
+                    # Add column allowing NULLs initially to avoid NotNullViolation 
+                    conn.execute(text("ALTER TABLE comments ADD COLUMN target_id INTEGER;"))
+                    
+                    # Migrate existing pin_id data before setting not null
+                    check_pin = text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name='comments' AND column_name='pin_id';"
+                    )
+                    if conn.execute(check_pin).fetchone():
+                        # We use 0 as a default fallback for orphaned comments just in case
+                        conn.execute(text("UPDATE comments SET target_id = COALESCE(pin_id, 0);"))
+                    else:
+                        conn.execute(text("UPDATE comments SET target_id = 0 WHERE target_id IS NULL;"))
+                        
+                    # Now that all rows have a value, enforce NOT NULL
+                    conn.execute(text("ALTER TABLE comments ALTER COLUMN target_id SET NOT NULL;"))
+                    
+                    logger.info("Migration: Added 'target_type'/'target_id' columns to 'comments' table.")
+
+                # Add constraint
+                check_constraint = text(
+                    "SELECT constraint_name FROM information_schema.table_constraints "
+                    "WHERE table_name='comments' AND constraint_name='check_comment_target_type';"
+                )
+                if not conn.execute(check_constraint).fetchone():
+                    conn.execute(text("ALTER TABLE comments ADD CONSTRAINT check_comment_target_type CHECK (target_type IN ('pin', 'area'));"))
+            except Exception as e:
+                logger.warning(f"Migration warning (comments target columns): {e}")
 
 
 def get_db():

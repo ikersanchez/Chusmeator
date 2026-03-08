@@ -306,6 +306,8 @@ def test_pin_comments():
     assert resp.status_code == 201
     data = resp.json()
     assert data["text"] == comment_data["text"]
+    assert data["targetType"] == "pin"
+    assert data["targetId"] == pin_id
     
     # Get comments
     get_resp = local_client.get(f"/api/pins/{pin_id}/comments")
@@ -330,6 +332,58 @@ def test_pin_comment_validation():
     comment_data = {"text": long_text}
     resp = client.post(f"/api/pins/{pin_id}/comments", json=comment_data)
     assert resp.status_code == 422  # Unprocessable Entity (validation error)
+
+def test_area_comments():
+    """Test creating and getting comments for an area."""
+    local_client = TestClient(app)
+    # Create an area first
+    area_data = {
+        "latlngs": [[40.0, -3.0], [40.01, -3.0], [40.01, -2.99]],
+        "color": "blue",
+        "text": "Area for comments",
+        "fontSize": "14px"
+    }
+    area_resp = local_client.post("/api/areas", json=area_data)
+    assert area_resp.status_code == 201
+    area_id = area_resp.json()["id"]
+
+    # Add a comment
+    comment_data = {"text": "This area is awesome!"}
+    resp = local_client.post(f"/api/areas/{area_id}/comments", json=comment_data)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["text"] == comment_data["text"]
+    assert data["targetType"] == "area"
+    assert data["targetId"] == area_id
+
+    # Get comments
+    get_resp = local_client.get(f"/api/areas/{area_id}/comments")
+    assert get_resp.status_code == 200
+    comments_list = get_resp.json()
+    assert len(comments_list) == 1
+
+def test_area_comment_validation():
+    """Test that area comment text cannot exceed 100 characters."""
+    local_client = TestClient(app)
+    area_data = {
+        "latlngs": [[40.0, -3.0], [40.01, -3.0], [40.01, -2.99]],
+        "color": "green",
+        "text": "Area for validation",
+        "fontSize": "14px"
+    }
+    area_resp = local_client.post("/api/areas", json=area_data)
+    area_id = area_resp.json()["id"]
+
+    # Add comment with >100 characters
+    long_text = "a" * 101
+    comment_data = {"text": long_text}
+    resp = local_client.post(f"/api/areas/{area_id}/comments", json=comment_data)
+    assert resp.status_code == 422  # Unprocessable Entity (validation error)
+
+def test_area_comment_nonexistent():
+    """Test commenting on non-existent area returns 404."""
+    resp = client.post("/api/areas/999999/comments", json={"text": "Hello"})
+    assert resp.status_code == 404
 
 def test_pin_text_validation():
     """Test that pin text cannot exceed 100 characters."""
