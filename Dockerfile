@@ -21,7 +21,7 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
 
 # Copy backend project files
-COPY backend/pyproject.toml .
+COPY backend/pyproject.toml backend/uv.lock ./
 # Sync dependencies
 RUN uv sync --no-dev
 

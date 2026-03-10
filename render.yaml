@@ -1,0 +1,31 @@
+services:
+  # A Docker-based web service
+  - type: web
+    name: chusmeator
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    plan: free # or starter
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chusmeator-db
+          property: connectionString
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        # Allow Render's own URL (once known) and localhost for testing
+        value: "*" # You might want to restrict this later
+      - key: ADMIN_KEY
+        generateValue: true
+      - key: LOCATIONIQ_API_KEY
+        sync: false # User will need to set this in Render dashboard
+      - key: LOCATIONIQ_URL
+        value: https://us1.locationiq.com/v1/search
+
+databases:
+  - name: chusmeator-db
+    plan: free # or starter
+    postgresMajorVersion: 16
