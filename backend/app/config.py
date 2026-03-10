@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -6,9 +7,11 @@ class Settings(BaseSettings):
     
     database_url: str = "sqlite:///./chusmeator.db"
     api_host: str = "0.0.0.0"
-    api_port: int = 8000
+    api_port: int = Field(8000, validation_alias="PORT")
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     nominatim_url: str = "https://nominatim.openstreetmap.org"
+    locationiq_url: str = "https://us1.locationiq.com/v1/search"
+    locationiq_api_key: str = ""
     # Secret key required in X-Admin-Key header to access /api/admin/* endpoints
     admin_key: str = ""
     # Secret key for session signing (change in production!)
