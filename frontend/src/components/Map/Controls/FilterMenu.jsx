@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
 import './FilterMenu.css';
 
 const FilterMenu = ({ filters, onFiltersChange, onClose, availableYears }) => {
     const [localFilters, setLocalFilters] = useState(JSON.parse(JSON.stringify(filters)));
+    const overlayRef = useRef(null);
+
+    useEffect(() => {
+        if (overlayRef.current) {
+            L.DomEvent.disableClickPropagation(overlayRef.current);
+            L.DomEvent.disableScrollPropagation(overlayRef.current);
+        }
+    }, []);
 
     const handleColorChange = (type, color) => {
         setLocalFilters(prev => ({
@@ -116,7 +125,7 @@ const FilterMenu = ({ filters, onFiltersChange, onClose, availableYears }) => {
     );
 
     return (
-        <div className="filter-menu-overlay" onClick={onClose}>
+        <div className="filter-menu-overlay" onClick={onClose} ref={overlayRef}>
             <div className="filter-menu-container" onClick={e => e.stopPropagation()}>
                 <div className="filter-menu-header">
                     <h2>Map Filters</h2>

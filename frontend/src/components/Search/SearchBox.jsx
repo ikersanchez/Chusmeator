@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { api } from '../../api/apiService';
 import { useDebounce } from '../../hooks/useDebounce';
 
@@ -9,6 +10,14 @@ const SearchBox = () => {
     const [suggestions, setSuggestions] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        if (containerRef.current) {
+            L.DomEvent.disableClickPropagation(containerRef.current);
+            L.DomEvent.disableScrollPropagation(containerRef.current);
+        }
+    }, []);
 
     const debouncedQuery = useDebounce(query, 300);
 
@@ -64,7 +73,7 @@ const SearchBox = () => {
     };
 
     return (
-        <div className="search-box-container" style={{
+        <div className="search-box-container" ref={containerRef} style={{
             position: 'absolute',
             top: '10px',
             left: '10px',
