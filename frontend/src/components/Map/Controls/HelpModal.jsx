@@ -1,6 +1,16 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import L from 'leaflet';
 
 const HelpModal = ({ onClose }) => {
+    const overlayRef = useRef(null);
+
+    useEffect(() => {
+        if (overlayRef.current) {
+            L.DomEvent.disableClickPropagation(overlayRef.current);
+            L.DomEvent.disableScrollPropagation(overlayRef.current);
+        }
+    }, []);
+
     return (
         <div style={{
             position: 'fixed',
@@ -14,7 +24,7 @@ const HelpModal = ({ onClose }) => {
             alignItems: 'center',
             justifyContent: 'center',
             backdropFilter: 'blur(5px)'
-        }} onClick={onClose}>
+        }} onClick={onClose} ref={overlayRef}>
             <div style={{
                 backgroundColor: 'white',
                 padding: '30px',
