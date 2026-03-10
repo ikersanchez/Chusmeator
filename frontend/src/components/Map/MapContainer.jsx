@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, LayersControl } from 'react-leaflet';
+import React, { useState, useEffect, useMemo } from 'react';
+import { MapContainer, TileLayer, LayersControl, ZoomControl } from 'react-leaflet';
+import { api } from '../../api/apiService';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -29,6 +30,37 @@ L.Marker.prototype.options.icon = DefaultIcon;
 const ChusmeatorMap = () => {
     const center = [40.4168, -3.7038]; // Madrid default
     const [interactionMode, setInteractionMode] = useState('VIEW');
+    const [filters, setFilters] = useState({
+        pins: { color: 'all', startMonth: '', startYear: '', endMonth: '', endYear: '' },
+        areas: { color: 'all', startMonth: '', startYear: '', endMonth: '', endYear: '' }
+    });
+
+    const [pins, setPins] = useState([]);
+    const [areas, setAreas] = useState([]);
+
+    // Calculate unique years dynamically from data
+    const availableYears = useMemo(() => {
+        const years = new Set();
+        [...pins, ...areas].forEach(item => {
+            if (item.createdAt) {
+                years.add(new Date(item.createdAt).getFullYear());
+            }
+        });
+        return [...years].sort((a, b) => b - a).map(String);
+    }, [pins, areas]);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const data = await api.getMapData();
+                setPins(data.pins || []);
+                setAreas(data.areas || []);
+            } catch (error) {
+                console.error('Failed to load map data:', error);
+            }
+        };
+        loadData();
+    }, []);
 
     return (
         <MapContainer
@@ -54,10 +86,26 @@ const ChusmeatorMap = () => {
             </LayersControl>
 
             <SearchBox />
-            <Toolbar mode={interactionMode} onModeChange={setInteractionMode} />
+            <Toolbar 
+                mode={interactionMode} 
+                onModeChange={setInteractionMode} 
+                filters={filters}
+                onFiltersChange={setFilters}
+                availableYears={availableYears}
+            />
 
-            <PinInteraction mode={interactionMode} />
-            <AreaInteraction mode={interactionMode} />
+            <PinInteraction 
+                mode={interactionMode} 
+                filters={filters.pins} 
+                pins={pins}
+                setPins={setPins}
+            />
+            <AreaInteraction 
+                mode={interactionMode} 
+                filters={filters.areas} 
+                areas={areas}
+                setAreas={setAreas}
+            />
 
         </MapContainer>
     );
