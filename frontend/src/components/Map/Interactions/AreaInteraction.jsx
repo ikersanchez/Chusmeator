@@ -4,8 +4,7 @@ import L from 'leaflet';
 import { api } from '../../../api/apiService';
 import * as turf from '@turf/turf';
 
-const AreaInteraction = ({ mode }) => {
-    const [areas, setAreas] = useState([]);
+const AreaInteraction = ({ mode, filters, areas, setAreas }) => {
     const [currentLayer, setCurrentLayer] = useState(null);
     const [editingArea, setEditingArea] = useState(null); // ID of area being edited
     const [color, setColor] = useState('blue');
@@ -33,6 +32,36 @@ const AreaInteraction = ({ mode }) => {
     const hudRef = useRef(null);
     const modalRef = useRef(null);
 
+    // Memoized filtered areas for performance
+    const filteredAreas = React.useMemo(() => {
+        return areas.filter(area => {
+            // Color filter
+            if (filters.color === 'none') {
+                return false;
+            }
+            if (filters.color !== 'all' && area.color !== filters.color) {
+                return false;
+            }
+
+            // Date range filter
+            if (filters.startMonth || filters.startYear || filters.endMonth || filters.endYear) {
+                const areaDate = new Date(area.createdAt);
+                const areaYearMonth = areaDate.getFullYear() * 100 + (areaDate.getMonth() + 1);
+
+                if (filters.startMonth && filters.startYear) {
+                    const startVal = parseInt(filters.startYear) * 100 + parseInt(filters.startMonth);
+                    if (areaYearMonth < startVal) return false;
+                }
+                if (filters.endMonth && filters.endYear) {
+                    const endVal = parseInt(filters.endYear) * 100 + parseInt(filters.endMonth);
+                    if (areaYearMonth > endVal) return false;
+                }
+            }
+
+            return true;
+        });
+    }, [areas, filters]);
+
     // Stop propagation on HUD and Modal
     useEffect(() => {
         if (hudRef.current) {
@@ -45,15 +74,13 @@ const AreaInteraction = ({ mode }) => {
         }
     }, [isManualDrawing, isDrawing, currentLayer, editingArea]);
 
-    // Load existing areas and user ID on mount
+    // Load user ID on mount
     useEffect(() => {
-        const loadData = async () => {
-            const data = await api.getMapData();
-            setAreas(data.areas || []);
+        const loadUserId = async () => {
             const userId = await api.getUserId();
             setCurrentUserId(userId);
         };
-        loadData();
+        loadUserId();
     }, []);
 
     // Auto-start manual drawing when switching to AREA mode
@@ -380,7 +407,7 @@ const AreaInteraction = ({ mode }) => {
     return (
         <FeatureGroup>
             {/* Render saved areas */}
-            {areas.map((area) => {
+            {filteredAreas.map((area) => {
                 const isOwner = area.userId === currentUserId;
                 const colorHex = area.color === 'blue' ? '#3b82f6' : area.color === 'green' ? '#22c55e' : '#ef4444';
 

@@ -31,10 +31,9 @@ const createColoredIcon = (color) => {
 
 const VOTE_THRESHOLD_PERMANENT_LABEL = 5;
 
-const PinInteraction = ({ mode }) => {
+const PinInteraction = ({ mode, filters, pins, setPins }) => {
     const [newPin, setNewPin] = useState(null);
     const [editingPin, setEditingPin] = useState(null); // ID of pin being edited
-    const [pins, setPins] = useState([]);
     const [formData, setFormData] = useState('');
     const [selectedColor, setSelectedColor] = useState('blue');
     const [currentUserId, setCurrentUserId] = useState('');
@@ -50,6 +49,36 @@ const PinInteraction = ({ mode }) => {
     // Ref for stopping leaflet propagation
     const modalRef = useRef(null);
 
+    // Memoized filtered pins for performance
+    const filteredPins = React.useMemo(() => {
+        return pins.filter(pin => {
+            // Color filter
+            if (filters.color === 'none') {
+                return false;
+            }
+            if (filters.color !== 'all' && pin.color !== filters.color) {
+                return false;
+            }
+
+            // Date range filter
+            if (filters.startMonth || filters.startYear || filters.endMonth || filters.endYear) {
+                const pinDate = new Date(pin.createdAt);
+                const pinYearMonth = pinDate.getFullYear() * 100 + (pinDate.getMonth() + 1);
+
+                if (filters.startMonth && filters.startYear) {
+                    const startVal = parseInt(filters.startYear) * 100 + parseInt(filters.startMonth);
+                    if (pinYearMonth < startVal) return false;
+                }
+                if (filters.endMonth && filters.endYear) {
+                    const endVal = parseInt(filters.endYear) * 100 + parseInt(filters.endMonth);
+                    if (pinYearMonth > endVal) return false;
+                }
+            }
+
+            return true;
+        });
+    }, [pins, filters]);
+
     // Stop propagation on Modal
     useEffect(() => {
         if (modalRef.current) {
@@ -58,15 +87,13 @@ const PinInteraction = ({ mode }) => {
         }
     }, [newPin, editingPin]);
 
-    // Load existing pins and user ID on mount
+    // Load user ID on mount
     useEffect(() => {
-        const loadData = async () => {
-            const data = await api.getMapData();
-            setPins(data.pins || []);
+        const loadUserId = async () => {
             const userId = await api.getUserId();
             setCurrentUserId(userId);
         };
-        loadData();
+        loadUserId();
     }, []);
 
     // Handle map clicks to drop a temporary pin (only in PIN mode)
@@ -244,7 +271,7 @@ const PinInteraction = ({ mode }) => {
     return (
         <>
             {/* Existing saved pins */}
-            {pins.map((pin) => {
+            {filteredPins.map((pin) => {
                 const isOwner = pin.userId === currentUserId;
                 const showPermanentLabel = pin.votes >= VOTE_THRESHOLD_PERMANENT_LABEL;
 

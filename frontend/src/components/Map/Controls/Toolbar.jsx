@@ -2,9 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import './Toolbar.css';
 import HelpModal from './HelpModal';
+import FilterMenu from './FilterMenu';
 
-const Toolbar = ({ mode, onModeChange }) => {
+const Toolbar = ({ mode, onModeChange, filters, onFiltersChange, availableYears }) => {
     const [showHelp, setShowHelp] = React.useState(false);
+    const [showFilters, setShowFilters] = React.useState(false);
     const toolbarRef = useRef(null);
 
     const modes = [
@@ -29,6 +31,11 @@ const Toolbar = ({ mode, onModeChange }) => {
     const handleHelpClick = (e) => {
         e.stopPropagation();
         setShowHelp(true);
+    };
+
+    const handleFilterClick = (e) => {
+        e.stopPropagation();
+        setShowFilters(!showFilters);
     };
 
     // Generic handler to stop events at the container level
@@ -58,6 +65,14 @@ const Toolbar = ({ mode, onModeChange }) => {
                             <span className="toolbar-label">{m.label}</span>
                         </button>
                     ))}
+                    <button
+                        className={`toolbar-btn ${showFilters ? 'active' : ''}`}
+                        onClick={handleFilterClick}
+                        title="Filters & Tools"
+                    >
+                        <span className="toolbar-icon">🔧</span>
+                        <span className="toolbar-label">Tools</span>
+                    </button>
                 </div>
                 <button
                     className="toolbar-help-btn"
@@ -68,6 +83,14 @@ const Toolbar = ({ mode, onModeChange }) => {
                 </button>
             </div>
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+            {showFilters && (
+                <FilterMenu 
+                    filters={filters} 
+                    onFiltersChange={onFiltersChange} 
+                    onClose={() => setShowFilters(false)} 
+                    availableYears={availableYears}
+                />
+            )}
         </>
     );
 };
