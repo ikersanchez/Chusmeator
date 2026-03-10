@@ -96,7 +96,7 @@ class UserIdResponse(BaseSchema):
 class SearchResult(BaseModel):
     """Schema for search result."""
     lat: float
-    lon: float  # Note: Nominatim uses 'lon' not 'lng'
+    lon: float  # Note: LocationIQ (like Nominatim) uses 'lon' not 'lng'
     display_name: str
 
 

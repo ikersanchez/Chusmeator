@@ -8,7 +8,7 @@ FastAPI backend for the Chusmeator interactive map application.
 - **SQLite/PostgreSQL** database support
 - **User authentication** via X-User-Id header
 - **Ownership validation** for delete/update operations
-- **Address search** proxy to OpenStreetMap Nominatim
+- **Address search** proxy to LocationIQ API
 - **CORS enabled** for frontend integration
 
 ## API Endpoints

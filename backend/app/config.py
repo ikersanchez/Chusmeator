@@ -8,7 +8,6 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
-    nominatim_url: str = "https://nominatim.openstreetmap.org"
     # LocationIQ API for address search
     locationiq_url: str = "https://us1.locationiq.com/v1/search"
     locationiq_api_key: str = ""
