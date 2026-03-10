@@ -79,28 +79,17 @@ def get_map_data(
 @router.get("/search", response_model=List[schemas.SearchResult])
 async def search_address(q: str = Query(..., description="Search query")):
     """
-    Search for addresses using LocationIQ ONLY.
-    Proxies the request to avoid CORS issues and secure the API key.
+    Search for addresses using OpenStreetMap Nominatim.
+    Proxies the request to avoid CORS issues.
     """
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Search query is required")
     
-    if not settings.locationiq_api_key:
-        logger.error("LOCATIONIQ_API_KEY is missing in settings")
-        raise HTTPException(
-            status_code=500, 
-            detail="Search configuration error: LocationIQ API key is missing."
-        )
-
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                settings.locationiq_url,
-                params={
-                    "format": "json", 
-                    "q": q, 
-                    "key": settings.locationiq_api_key
-                },
+                f"{settings.nominatim_url}/search",
+                params={"format": "json", "q": q},
                 headers={"User-Agent": "Chusmeator/1.0"},
                 timeout=10.0
             )
@@ -111,10 +100,9 @@ async def search_address(q: str = Query(..., description="Search query")):
                 schemas.SearchResult(
                     lat=float(item["lat"]),
                     lon=float(item["lon"]),
-                    display_name=item.get("display_name") or item.get("address", {}).get("name", "Unknown")
+                    display_name=item["display_name"]
                 )
                 for item in results
             ]
     except httpx.HTTPError as e:
-        logger.error(f"LocationIQ Search failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
