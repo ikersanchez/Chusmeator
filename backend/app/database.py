@@ -101,6 +101,19 @@ def init_db():
             except Exception as e:
                 logger.warning(f"Migration warning (comments target columns): {e}")
 
+            # Migrate target_id from INTEGER to BIGINT (pin/area IDs can exceed 32-bit range)
+            try:
+                check_type = text(
+                    "SELECT data_type FROM information_schema.columns "
+                    "WHERE table_name='comments' AND column_name='target_id';"
+                )
+                result = conn.execute(check_type).fetchone()
+                if result and result[0] == 'integer':
+                    conn.execute(text("ALTER TABLE comments ALTER COLUMN target_id TYPE BIGINT;"))
+                    logger.info("Migration: Changed 'target_id' column to BIGINT in 'comments' table.")
+            except Exception as e:
+                logger.warning(f"Migration warning (comments target_id bigint): {e}")
+
 
 def get_db():
     """Dependency to get database session."""

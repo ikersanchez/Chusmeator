@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     api_port: int = 8000
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     nominatim_url: str = "https://nominatim.openstreetmap.org"
+    # LocationIQ API for address search
+    locationiq_url: str = "https://us1.locationiq.com/v1/search"
+    locationiq_api_key: str = ""
     # Secret key required in X-Admin-Key header to access /api/admin/* endpoints
     admin_key: str = ""
     # Secret key for session signing (change in production!)

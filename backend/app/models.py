@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Integer, Text, DateTime, ForeignKey, JSON, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, String, Float, Integer, BigInteger, Text, DateTime, ForeignKey, JSON, CheckConstraint, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import declarative_base
 from enum import Enum
@@ -60,7 +60,7 @@ class CommentModel(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     target_type = Column(String(10), nullable=False)  # "pin", "area"
-    target_id = Column(Integer, nullable=False)
+    target_id = Column(BigInteger, nullable=False)
     user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
     text = Column(String(100), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
