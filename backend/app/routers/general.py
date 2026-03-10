@@ -79,23 +79,37 @@ def get_map_data(
 @router.get("/search", response_model=List[schemas.SearchResult])
 async def search_address(q: str = Query(..., description="Search query")):
     """
-    Search for addresses using OpenStreetMap Nominatim.
-    Proxies the request to avoid CORS issues.
+    Search for addresses using LocationIQ.
+    Proxies the request to protect the API key and avoid CORS issues.
     """
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Search query is required")
+
+    if not settings.locationiq_api_key:
+        print("ERROR: locationiq_api_key is empty or None")
+        raise HTTPException(status_code=500, detail="LocationIQ API key is not configured")
     
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{settings.nominatim_url}/search",
-                params={"format": "json", "q": q},
+                settings.locationiq_url,
+                params={
+                    "key": settings.locationiq_api_key,
+                    "q": q,
+                    "format": "json"
+                },
                 headers={"User-Agent": "Chusmeator/1.0"},
                 timeout=10.0
             )
             response.raise_for_status()
             results = response.json()
             
+            # LocationIQ returns a list and might have identical keys to Nominatim
+            if not isinstance(results, list):
+                if isinstance(results, dict) and "error" in results:
+                    return []
+                results = []
+
             return [
                 schemas.SearchResult(
                     lat=float(item["lat"]),
@@ -104,5 +118,15 @@ async def search_address(q: str = Query(..., description="Search query")):
                 )
                 for item in results
             ]
+    except httpx.HTTPStatusError as e:
+        print(f"HTTPStatusError: {e.response.status_code} - {e.response.text}")
+        # LocationIQ returns 404 when no results are found
+        if e.response.status_code == 404:
+            return []
+        raise HTTPException(status_code=500, detail=f"Search failed: {e.response.text}")
     except httpx.HTTPError as e:
+        print(f"HTTPError: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+    except Exception as e:
+        print(f"Generic Exception: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")

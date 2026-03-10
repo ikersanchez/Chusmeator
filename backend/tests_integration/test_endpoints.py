@@ -63,14 +63,24 @@ def test_area_crud_flow(client):
 
 
 
+from unittest.mock import patch, AsyncMock
+
 def test_search_proxy(client):
-    """Verify the search proxy endpoint (mocking httpx might be needed for CI, but let's test the interface)."""
-    # Note: This actually calls the real Nominatim. In a pure integration test we might mock it,
-    # but the user asked to make sure things work.
-    response = client.get("/api/search?q=Madrid")
-    assert response.status_code == 200
-    results = response.json()
-    assert isinstance(results, list)
-    if len(results) > 0:
+    """Verify the search proxy endpoint mocking LocationIQ to prevent API calls."""
+    mock_response = AsyncMock()
+    mock_response.status_code = 200
+    mock_response.json = lambda: [
+        {"lat": "40.4168", "lon": "-3.7038", "display_name": "Madrid, Spain"}
+    ]
+    # raise_for_status should do nothing
+    mock_response.raise_for_status = lambda: None
+    
+    with patch("httpx.AsyncClient.get", return_value=mock_response):
+        response = client.get("/api/search?q=Madrid")
+        assert response.status_code == 200
+        results = response.json()
+        assert isinstance(results, list)
+        assert len(results) == 1
         assert "lat" in results[0]
+        assert "lon" in results[0]
         assert "display_name" in results[0]
