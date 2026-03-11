@@ -4,6 +4,7 @@ from app import schemas
 from app.database import get_db
 from app.dependencies import ensure_user_exists
 from app.services.area_service import AreaService
+from app.services.moderation_service import ModerationService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/api", tags=["Areas"])
 
 
 @router.post("/areas", response_model=schemas.Area, status_code=201)
-def create_area(
+async def create_area(
     area_data: schemas.AreaCreate,
     user_id: str = Depends(ensure_user_exists),
     db: Session = Depends(get_db)
@@ -20,6 +21,7 @@ def create_area(
     """Create a new area."""
     try:
         logger.info(f"Creating area for user {user_id}: {area_data.text}")
+        await ModerationService.check_text_for_pii(area_data.text)
         db_area = AreaService.create_area(db, area_data, user_id)
         return db_area
     except HTTPException:
@@ -30,7 +32,7 @@ def create_area(
 
 
 @router.put("/areas/{area_id}", response_model=schemas.Area)
-def update_area(
+async def update_area(
     area_id: int,
     area_data: schemas.AreaUpdate,
     user_id: str = Depends(ensure_user_exists),
@@ -39,6 +41,8 @@ def update_area(
     """Update an existing area. Only the owner can edit."""
     try:
         logger.info(f"Updating area {area_id} for user {user_id}")
+        if area_data.text:
+            await ModerationService.check_text_for_pii(area_data.text)
         db_area = AreaService.update_area(db, area_id, user_id, area_data)
         return db_area
     except HTTPException:
