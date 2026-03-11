@@ -56,6 +56,20 @@ const IntroScreen = ({ onComplete }) => {
             }}>
                 Discover and share information on the map
             </p>
+            <div style={{
+                position: 'absolute',
+                bottom: '2rem',
+                fontSize: '1rem',
+                color: 'white',
+                background: 'rgba(255, 60, 60, 0.2)',
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 60, 60, 0.4)',
+                textAlign: 'center',
+                maxWidth: '80%'
+            }}>
+                ⚠️ Toxic comments, sensitive information, and personal data are strictly prohibited.
+            </div>
             <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
