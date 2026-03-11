@@ -4,6 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.database import Base, get_db
+from app.services.moderation_service import ModerationService
+import pytest_asyncio
 
 # Use SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -26,6 +28,20 @@ def setup_db():
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
+
+@pytest.fixture
+def mock_moderation(monkeypatch):
+    """Mocks ModerationService to block tests with 'PII' and allow everything else."""
+    async def mock_check_text(text: str):
+        if "PII" in text:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Text contains Personal Identifiable Information (PII) and cannot be saved.")
+    monkeypatch.setattr(ModerationService, "check_text_for_pii", mock_check_text)
+    
+@pytest.fixture(autouse=True)
+def auto_mock_moderation(mock_moderation):
+    """Automatically mock moderation for all tests unless overridden."""
+    pass
 
 def test_health_check():
     response = client.get("/health")
@@ -395,3 +411,42 @@ def test_pin_text_validation():
     }
     resp = client.post("/api/pins", json=pin_data)
     assert resp.status_code == 422
+
+def test_moderation_blocks_pii_pin():
+    """Test that creating a pin with PII is blocked."""
+    pin_data = {
+        "lat": 40.0,
+        "lng": -70.0,
+        "text": "Call me at PII number",
+        "color": "blue"
+    }
+    resp = client.post("/api/pins", json=pin_data)
+    assert resp.status_code == 400
+    assert "PII" in resp.json()["detail"]
+
+def test_moderation_blocks_pii_area():
+    """Test that creating an area with PII is blocked."""
+    area_data = {
+        "latlngs": [[40.0, -3.0], [40.01, -3.0], [40.01, -2.99]],
+        "color": "blue",
+        "text": "This is PII text",
+        "fontSize": "14px"
+    }
+    resp = client.post("/api/areas", json=area_data)
+    assert resp.status_code == 400
+    assert "PII" in resp.json()["detail"]
+
+def test_moderation_blocks_pii_comment():
+    """Test that creating a comment with PII is blocked."""
+    local_client = TestClient(app)
+    # Create valid pin
+    pin_data = {"lat": 40.0, "lng": -70.0, "text": "Valid Pin", "color": "blue"}
+    pin_resp = local_client.post("/api/pins", json=pin_data)
+    assert pin_resp.status_code == 201
+    pin_id = pin_resp.json()["id"]
+
+    # Block comment with PII
+    comment_data = {"text": "My phone is PII"}
+    resp = local_client.post(f"/api/pins/{pin_id}/comments", json=comment_data)
+    assert resp.status_code == 400
+    assert "PII" in resp.json()["detail"]

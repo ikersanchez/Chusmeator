@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # Secret key for session signing (change in production!)
     secret_key: str = "dev-secret-key-change-me-12345"
     session_cookie_name: str = "chusmeator_session"
+    deepseek_api_key: str = ""
     
     # Abuse prevention limits
     max_pins_per_day: int = 20
