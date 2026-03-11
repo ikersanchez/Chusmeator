@@ -24,6 +24,8 @@ services:
         sync: false # User will need to set this in Render dashboard
       - key: LOCATIONIQ_URL
         value: https://us1.locationiq.com/v1/search
+      - key: DEEPSEEK_API_KEY
+        sync: false # User will need to set this in Render dashboard
 
 databases:
   - name: chusmeator-db
