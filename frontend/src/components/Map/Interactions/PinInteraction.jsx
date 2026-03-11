@@ -520,8 +520,8 @@ const PinInteraction = ({ mode, filters, pins, setPins }) => {
                             <textarea
                                 value={formData}
                                 onChange={(e) => setFormData(e.target.value)}
-                                placeholder="e.g. 'Best Coffee', 'Hidden Gem'..."
-                                maxLength={100}
+                                placeholder="e.g. 'Best Coffee'..."
+                                maxLength={25}
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
