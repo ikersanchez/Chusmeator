@@ -775,7 +775,7 @@ const AreaInteraction = ({ mode, filters, areas, setAreas }) => {
                             value={text}
                             onChange={e => setText(e.target.value)}
                             placeholder="e.g. 'Hipster Main St'..."
-                            maxLength={25}
+                            maxLength={35}
                             style={{
                                 width: '100%',
                                 padding: '10px 12px',

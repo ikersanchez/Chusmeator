@@ -20,7 +20,7 @@ class PinCreate(BaseModel):
     """Schema for creating a new pin."""
     lat: float = Field(..., description="Latitude coordinate")
     lng: float = Field(..., description="Longitude coordinate")
-    text: str = Field(..., max_length=25, description="Pin description text")
+    text: str = Field(..., max_length=35, description="Pin description text")
     color: PinColor = PinColor.BLUE
 
 
@@ -28,7 +28,7 @@ class PinUpdate(BaseModel):
     """Schema for updating an existing pin."""
     lat: Optional[float] = Field(None, description="Latitude coordinate")
     lng: Optional[float] = Field(None, description="Longitude coordinate")
-    text: Optional[str] = Field(None, max_length=25, description="Pin description text")
+    text: Optional[str] = Field(None, max_length=35, description="Pin description text")
     color: Optional[PinColor] = None
 
 
@@ -52,7 +52,7 @@ class AreaCreate(BaseSchema):
     """Schema for creating a new area."""
     latlngs: List[Any]  # Flexible for different Leaflet structures
     color: PinColor
-    text: str = Field(..., max_length=25)
+    text: str = Field(..., max_length=35)
     font_size: str
 
 
@@ -60,7 +60,7 @@ class AreaUpdate(BaseSchema):
     """Schema for updating an existing area."""
     latlngs: Optional[List[Any]] = None
     color: Optional[PinColor] = None
-    text: Optional[str] = Field(None, max_length=25)
+    text: Optional[str] = Field(None, max_length=35)
     font_size: Optional[str] = None
 
 

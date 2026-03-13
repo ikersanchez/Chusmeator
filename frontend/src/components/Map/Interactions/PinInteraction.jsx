@@ -521,7 +521,7 @@ const PinInteraction = ({ mode, filters, pins, setPins }) => {
                                 value={formData}
                                 onChange={(e) => setFormData(e.target.value)}
                                 placeholder="e.g. 'Best Coffee'..."
-                                maxLength={25}
+                                maxLength={35}
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
