@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import logo from '../assets/logo.png';
 
 const IntroScreen = ({ onComplete }) => {
     const [isVisible, setIsVisible] = useState(true);
@@ -117,7 +118,21 @@ const IntroScreen = ({ onComplete }) => {
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     textShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}>
+                    <img 
+                        src={logo} 
+                        alt="Logo" 
+                        style={{ 
+                            height: '1.8em', 
+                            width: 'auto', 
+                            objectFit: 'contain', 
+                            filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.4))',
+                            margin: '0 -0.8em' // Removes the transparent padding from the original image width
+                        }} 
+                    />
                     Chusmeator
                 </h1>
                 
