@@ -68,6 +68,45 @@ const IntroScreen = ({ onComplete }) => {
                 alignItems: 'center',
                 animation: 'slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards'
             }}>
+                {/* Modern SVG Logo */}
+                <div style={{
+                    position: 'relative',
+                    width: '120px',
+                    height: '120px',
+                    marginBottom: '2rem',
+                    animation: 'floatIcon 3s ease-in-out infinite'
+                }}>
+                    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
+                                <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
+                            </linearGradient>
+                            <filter id="glassBlur">
+                                <feGaussianBlur stdDeviation="2" />
+                            </filter>
+                        </defs>
+                        
+                        {/* Outer Glow */}
+                        <circle cx="45" cy="45" r="30" fill="none" stroke="rgba(99,102,241,0.5)" strokeWidth="4" filter="blur(6px)" />
+                        
+                        {/* Glass Body */}
+                        <circle cx="45" cy="45" r="30" fill="url(#glassGradient)" stroke="rgba(255,255,255,0.8)" strokeWidth="3" backdropFilter="blur(10px)" />
+                        
+                        {/* Inner reflection */}
+                        <path d="M 25 35 A 25 25 0 0 1 55 20" stroke="rgba(255,255,255,0.6)" strokeWidth="3" strokeLinecap="round" fill="none" />
+                        
+                        {/* Handle */}
+                        <path d="M 66 66 L 88 88" stroke="url(#glassGradient)" strokeWidth="12" strokeLinecap="round" />
+                        <path d="M 66 66 L 88 88" stroke="rgba(255,255,255,0.8)" strokeWidth="4" strokeLinecap="round" />
+                        
+                        {/* Dynamic Eye/Center point */}
+                        <circle cx="45" cy="45" r="8" fill="#e2e8f0">
+                            <animate attributeName="r" values="6;9;6" dur="2s" repeatCount="indefinite" />
+                            <animate attributeName="fill" values="#e2e8f0;#6366f1;#e2e8f0" dur="4s" repeatCount="indefinite" />
+                        </circle>
+                    </svg>
+                </div>
 
                 <h1 style={{
                     fontSize: 'clamp(2.5rem, 8vw, 4rem)',
