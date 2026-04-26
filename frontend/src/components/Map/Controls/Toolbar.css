@@ -74,6 +74,17 @@
     background: var(--accent-hover);
 }
 
+.toolbar-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.8);
+}
+
+.toolbar-btn.disabled:hover {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
 .toolbar-icon {
     font-size: 1.35rem;
     line-height: 1;

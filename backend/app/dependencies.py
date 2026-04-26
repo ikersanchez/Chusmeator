@@ -1,27 +1,33 @@
 from fastapi import Header, HTTPException, Depends, Request
+from typing import Optional
 from sqlalchemy.orm import Session
 import uuid
 from app.database import get_db
 from app.models import User
+from app.config import settings
 
 
-def get_current_user_id(request: Request) -> str:
+def get_optional_user_id(request: Request) -> Optional[str]:
     """
-    Extract or generate user ID from header or session cookie.
+    Attempt to extract user ID from header or session cookie without creating it.
+    """
+    user_id = None
     
-    Args:
-        request: FastAPI request object
-        
-    Returns:
-        User ID string
-    """
-    # Check header first (useful for development/testing)
-    user_id = request.headers.get("X-User-Id")
+    # Only accept X-User-Id header in debug mode
+    if settings.debug:
+        user_id = request.headers.get("X-User-Id")
     
     if not user_id:
-        # Fallback to session
         user_id = request.session.get("user_id")
-    
+        
+    return user_id
+
+
+def get_current_user_id(request: Request, user_id: Optional[str] = Depends(get_optional_user_id)) -> str:
+    """
+    Extract or generate user ID from header or session cookie.
+    If not found, generates a new one and sets the session cookie.
+    """
     if not user_id:
         # Generate a new unique ID if not present
         user_id = f"user_{uuid.uuid4().hex[:12]}"

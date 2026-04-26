@@ -46,6 +46,12 @@ export const api = {
         return data.userId;
     },
 
+    // Initialize session explicitly
+    initSession: async () => {
+        const data = await apiFetch('/user/init', { method: 'POST' });
+        return data.userId;
+    },
+
     // Get all map data (pins, areas)
     getMapData: async () => {
         return apiFetch('/map-data');

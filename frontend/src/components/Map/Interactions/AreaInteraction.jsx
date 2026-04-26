@@ -4,7 +4,7 @@ import L from 'leaflet';
 import { api } from '../../../api/apiService';
 import * as turf from '@turf/turf';
 
-const AreaInteraction = ({ mode, filters, areas, setAreas }) => {
+const AreaInteraction = ({ mode, filters, areas, setAreas, cookiesAccepted }) => {
     const [currentLayer, setCurrentLayer] = useState(null);
     const [editingArea, setEditingArea] = useState(null); // ID of area being edited
     const [color, setColor] = useState('blue');
@@ -74,14 +74,14 @@ const AreaInteraction = ({ mode, filters, areas, setAreas }) => {
         }
     }, [isManualDrawing, isDrawing, currentLayer, editingArea]);
 
-    // Load user ID on mount
+    // Load user ID on mount and when cookies are accepted
     useEffect(() => {
         const loadUserId = async () => {
             const userId = await api.getUserId();
             setCurrentUserId(userId);
         };
         loadUserId();
-    }, []);
+    }, [cookiesAccepted]);
 
     // Auto-start manual drawing when switching to AREA mode
     useEffect(() => {
@@ -447,8 +447,10 @@ const AreaInteraction = ({ mode, filters, areas, setAreas }) => {
 
                                     <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <button
-                                            onClick={() => handleVote(area, 1)}
+                                            onClick={() => cookiesAccepted && handleVote(area, 1)}
                                             className={`vote-btn ${area.userVoteValue === 1 ? 'voted' : ''}`}
+                                            disabled={!cookiesAccepted}
+                                            title={!cookiesAccepted ? 'Acepta cookies para votar' : ''}
                                         >
                                             👍
                                         </button>
@@ -456,20 +458,24 @@ const AreaInteraction = ({ mode, filters, areas, setAreas }) => {
                                             {area.votes}
                                         </span>
                                         <button
-                                            onClick={() => handleVote(area, -1)}
+                                            onClick={() => cookiesAccepted && handleVote(area, -1)}
                                             className={`vote-btn dislike-btn ${area.userVoteValue === -1 ? 'disliked' : ''}`}
+                                            disabled={!cookiesAccepted}
+                                            title={!cookiesAccepted ? 'Acepta cookies para votar' : ''}
                                         >
                                             👎
                                         </button>
                                         <button
-                                            onClick={() => handleToggleComments(area.id)}
+                                            onClick={() => cookiesAccepted && handleToggleComments(area.id)}
                                             className="action-btn comment-btn"
+                                            disabled={!cookiesAccepted}
+                                            title={!cookiesAccepted ? 'Acepta cookies para ver comentarios' : ''}
                                         >
                                             💬 Comments {area.commentCount > 0 && `(${area.commentCount})`}
                                         </button>
                                     </div>
 
-                                    {isOwner && (
+                                    {isOwner && cookiesAccepted && (
                                         <div style={{ marginTop: '8px' }}>
                                             <button
                                                 onClick={() => handleDelete(area.id)}

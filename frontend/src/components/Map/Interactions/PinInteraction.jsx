@@ -31,7 +31,7 @@ const createColoredIcon = (color) => {
 
 const VOTE_THRESHOLD_PERMANENT_LABEL = 5;
 
-const PinInteraction = ({ mode, filters, pins, setPins }) => {
+const PinInteraction = ({ mode, filters, pins, setPins, cookiesAccepted }) => {
     const [newPin, setNewPin] = useState(null);
     const [editingPin, setEditingPin] = useState(null); // ID of pin being edited
     const [formData, setFormData] = useState('');
@@ -87,14 +87,14 @@ const PinInteraction = ({ mode, filters, pins, setPins }) => {
         }
     }, [newPin, editingPin]);
 
-    // Load user ID on mount
+    // Load user ID on mount and when cookies are accepted
     useEffect(() => {
         const loadUserId = async () => {
             const userId = await api.getUserId();
             setCurrentUserId(userId);
         };
         loadUserId();
-    }, []);
+    }, [cookiesAccepted]);
 
     // Handle map clicks to drop a temporary pin (only in PIN mode)
     useMapEvents({
@@ -308,8 +308,10 @@ const PinInteraction = ({ mode, filters, pins, setPins }) => {
                                 {/* Vote buttons and Comments button */}
                                 <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <button
-                                        onClick={() => handleVote(pin, 1)}
+                                        onClick={() => cookiesAccepted && handleVote(pin, 1)}
                                         className={`action-btn vote-btn ${pin.userVoteValue === 1 ? 'voted' : ''}`}
+                                        disabled={!cookiesAccepted}
+                                        title={!cookiesAccepted ? 'Acepta cookies para votar' : ''}
                                     >
                                         👍
                                     </button>
@@ -317,20 +319,24 @@ const PinInteraction = ({ mode, filters, pins, setPins }) => {
                                         {pin.votes}
                                     </span>
                                     <button
-                                        onClick={() => handleVote(pin, -1)}
+                                        onClick={() => cookiesAccepted && handleVote(pin, -1)}
                                         className={`action-btn vote-btn dislike-btn ${pin.userVoteValue === -1 ? 'disliked' : ''}`}
+                                        disabled={!cookiesAccepted}
+                                        title={!cookiesAccepted ? 'Acepta cookies para votar' : ''}
                                     >
                                         👎
                                     </button>
                                     <button
-                                        onClick={() => handleToggleComments(pin.id)}
+                                        onClick={() => cookiesAccepted && handleToggleComments(pin.id)}
                                         className="action-btn comment-btn"
+                                        disabled={!cookiesAccepted}
+                                        title={!cookiesAccepted ? 'Acepta cookies para ver comentarios' : ''}
                                     >
                                         💬 Comments {pin.commentCount > 0 && `(${pin.commentCount})`}
                                     </button>
                                 </div>
 
-                                {isOwner && (
+                                {isOwner && cookiesAccepted && (
                                     <div style={{ marginTop: '8px' }}>
                                         <button
                                             onClick={() => handleDelete(pin.id)}

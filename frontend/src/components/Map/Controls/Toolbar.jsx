@@ -4,7 +4,7 @@ import './Toolbar.css';
 import HelpModal from './HelpModal';
 import FilterMenu from './FilterMenu';
 
-const Toolbar = ({ mode, onModeChange, filters, onFiltersChange, availableYears }) => {
+const Toolbar = ({ mode, onModeChange, filters, onFiltersChange, availableYears, cookiesAccepted }) => {
     const [showHelp, setShowHelp] = React.useState(false);
     const [showFilters, setShowFilters] = React.useState(false);
     const toolbarRef = useRef(null);
@@ -54,17 +54,21 @@ const Toolbar = ({ mode, onModeChange, filters, onFiltersChange, availableYears 
                 onClick={stopPropagation}
             >
                 <div className="toolbar-buttons">
-                    {modes.map((m) => (
-                        <button
-                            key={m.id}
-                            className={`toolbar-btn ${mode === m.id ? 'active' : ''}`}
-                            onClick={(e) => handleModeClick(e, m.id)}
-                            title={m.description}
-                        >
-                            <span className="toolbar-icon">{m.icon}</span>
-                            <span className="toolbar-label">{m.label}</span>
-                        </button>
-                    ))}
+                    {modes.map((m) => {
+                        const isDisabled = !cookiesAccepted && (m.id === 'PIN' || m.id === 'AREA');
+                        return (
+                            <button
+                                key={m.id}
+                                className={`toolbar-btn ${mode === m.id ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
+                                onClick={(e) => !isDisabled && handleModeClick(e, m.id)}
+                                title={isDisabled ? 'Acepta las cookies para crear contenido' : m.description}
+                                disabled={isDisabled}
+                            >
+                                <span className="toolbar-icon">{m.icon}</span>
+                                <span className="toolbar-label">{m.label}</span>
+                            </button>
+                        );
+                    })}
                     <button
                         className={`toolbar-btn ${showFilters ? 'active' : ''}`}
                         onClick={handleFilterClick}

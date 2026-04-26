@@ -89,7 +89,7 @@ class MapData(BaseSchema):
 # User Schema
 class UserIdResponse(BaseSchema):
     """Schema for user ID response."""
-    user_id: str
+    user_id: Optional[str]
 
 
 # Search Schemas

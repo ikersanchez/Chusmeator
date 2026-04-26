@@ -20,7 +20,7 @@ async def create_area(
 ):
     """Create a new area."""
     try:
-        logger.info(f"Creating area for user {user_id}: {area_data.text}")
+        logger.info(f"Creating area for user {user_id}")
         AreaService.check_rate_limit(db, user_id)
         await ModerationService.check_text_for_pii(db, area_data.text, user_id, "area")
         db_area = AreaService.create_area(db, area_data, user_id)
@@ -28,8 +28,8 @@ async def create_area(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"ERROR creating area: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error creating area for user {user_id}: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.put("/areas/{area_id}", response_model=schemas.Area)
@@ -49,8 +49,8 @@ async def update_area(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"ERROR updating area: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error updating area {area_id}: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.delete("/areas/{area_id}", response_model=schemas.SuccessResponse)

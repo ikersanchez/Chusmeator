@@ -1,0 +1,45 @@
+# Version control
+.git
+.gitignore
+
+# Environment files (contain secrets)
+backend/.env
+backend/.env.local
+
+# Virtual environments
+backend/.venv
+backend/.uv
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Python caches
+backend/__pycache__
+backend/.pytest_cache
+
+# Database files
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+# Logs
+backend/*.log
+backend/uvicorn.log
+
+# Frontend dev dependencies (rebuilt in Docker)
+frontend/node_modules
+node_modules
+
+# Tests (not needed in production image)
+backend/tests
+backend/tests_integration
+backend/test_*.py
+backend/seed_test_data.py
+backend/migrate_pins.py
+
+# Documentation
+*.md
+!README.md

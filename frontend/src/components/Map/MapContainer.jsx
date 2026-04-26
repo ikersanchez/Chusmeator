@@ -27,7 +27,7 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 
-const ChusmeatorMap = () => {
+const ChusmeatorMap = ({ cookiesAccepted }) => {
     const center = [40.4168, -3.7038]; // Madrid default
     const [interactionMode, setInteractionMode] = useState('VIEW');
     const [filters, setFilters] = useState({
@@ -92,6 +92,7 @@ const ChusmeatorMap = () => {
                 filters={filters}
                 onFiltersChange={setFilters}
                 availableYears={availableYears}
+                cookiesAccepted={cookiesAccepted}
             />
 
             <PinInteraction 
@@ -99,12 +100,14 @@ const ChusmeatorMap = () => {
                 filters={filters.pins} 
                 pins={pins}
                 setPins={setPins}
+                cookiesAccepted={cookiesAccepted}
             />
             <AreaInteraction 
                 mode={interactionMode} 
                 filters={filters.areas} 
                 areas={areas}
                 setAreas={setAreas}
+                cookiesAccepted={cookiesAccepted}
             />
 
         </MapContainer>

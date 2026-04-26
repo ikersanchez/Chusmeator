@@ -19,7 +19,7 @@ async def create_pin(
     db: Session = Depends(get_db)
 ):
     """Create a new pin."""
-    logger.info(f"Creating pin for user {user_id}: {pin_data.text}")
+    logger.info(f"Creating pin for user {user_id}")
     PinService.check_rate_limit(db, user_id)
     await ModerationService.check_text_for_pii(db, pin_data.text, user_id, "pin")
     db_pin = PinService.create_pin(db, pin_data, user_id)

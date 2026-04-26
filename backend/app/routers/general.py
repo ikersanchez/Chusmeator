@@ -3,9 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import httpx
+import logging
+
+logger = logging.getLogger(__name__)
 from app import schemas
 from app.database import get_db
-from app.dependencies import get_current_user_id
+from app.dependencies import get_current_user_id, get_optional_user_id, ensure_user_exists
 from app.config import settings
 from app.services.pin_service import PinService
 from app.services.area_service import AreaService
@@ -16,14 +19,20 @@ router = APIRouter(prefix="/api", tags=["General"])
 
 
 @router.get("/user", response_model=schemas.UserIdResponse)
-def get_user_id(user_id: str = Depends(get_current_user_id)):
-    """Get current user ID from header."""
+def get_user_id(user_id: Optional[str] = Depends(get_optional_user_id)):
+    """Get current user ID from session/header, if any."""
+    return schemas.UserIdResponse(user_id=user_id)
+
+
+@router.post("/user/init", response_model=schemas.UserIdResponse)
+def init_user_session(user_id: str = Depends(ensure_user_exists)):
+    """Explicitly initialize a session and create user. Used after cookie acceptance."""
     return schemas.UserIdResponse(user_id=user_id)
 
 
 @router.get("/map-data", response_model=schemas.MapData)
 def get_map_data(
-    user_id: str = Depends(get_current_user_id),
+    user_id: Optional[str] = Depends(get_optional_user_id),
     db: Session = Depends(get_db),
 ):
     """Get all map data (pins and areas) with vote counts."""
@@ -86,8 +95,8 @@ async def search_address(q: str = Query(..., description="Search query")):
         raise HTTPException(status_code=400, detail="Search query is required")
 
     if not settings.locationiq_api_key:
-        print("ERROR: locationiq_api_key is empty or None")
-        raise HTTPException(status_code=500, detail="LocationIQ API key is not configured")
+        logger.error("LocationIQ API key is not configured")
+        raise HTTPException(status_code=500, detail="Search service is not configured")
     
     try:
         async with httpx.AsyncClient() as client:
@@ -119,14 +128,14 @@ async def search_address(q: str = Query(..., description="Search query")):
                 for item in results
             ]
     except httpx.HTTPStatusError as e:
-        print(f"HTTPStatusError: {e.response.status_code} - {e.response.text}")
+        logger.warning(f"Search HTTPStatusError: {e.response.status_code}")
         # LocationIQ returns 404 when no results are found
         if e.response.status_code == 404:
             return []
-        raise HTTPException(status_code=500, detail=f"Search failed: {e.response.text}")
+        raise HTTPException(status_code=500, detail="Search service error")
     except httpx.HTTPError as e:
-        print(f"HTTPError: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        logger.warning(f"Search HTTPError: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Search service error")
     except Exception as e:
-        print(f"Generic Exception: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        logger.error(f"Search unexpected error: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Internal server error")

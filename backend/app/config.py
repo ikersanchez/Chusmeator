@@ -1,8 +1,23 @@
+import sys
+import logging
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
+
+# Values that must NOT be used in production
+_INSECURE_DEFAULTS = {
+    "dev-secret-key-change-me-12345",
+    "change-this-secret-before-deploying",
+    "replace-me-with-a-secure-key",
+    "",
+}
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
+    
+    # Debug mode: enables Swagger docs, X-User-Id header, verbose errors
+    debug: bool = False
     
     database_url: str = "sqlite:///./chusmeator.db"
     api_host: str = "0.0.0.0"
@@ -16,6 +31,8 @@ class Settings(BaseSettings):
     # Secret key for session signing (change in production!)
     secret_key: str = "dev-secret-key-change-me-12345"
     session_cookie_name: str = "chusmeator_session"
+    # Set to True when serving over HTTPS (production)
+    https_only: bool = True
     deepseek_api_key: str = ""
     
     # Abuse prevention limits
@@ -30,4 +47,30 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def validate_production_settings() -> None:
+    """Validate that critical secrets are not using insecure defaults in production."""
+    if settings.debug:
+        logger.warning("⚠️  Running in DEBUG mode. Do NOT use in production.")
+        return
+    
+    errors: list[str] = []
+    
+    if settings.secret_key in _INSECURE_DEFAULTS:
+        errors.append(
+            "SECRET_KEY is set to an insecure default. "
+            "Generate a secure key: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+        )
+    
+    if settings.admin_key in _INSECURE_DEFAULTS:
+        errors.append(
+            "ADMIN_KEY is set to an insecure default or is empty. "
+            "Set a strong ADMIN_KEY environment variable."
+        )
+    
+    if errors:
+        for err in errors:
+            logger.critical(f"🚨 SECURITY: {err}")
+        sys.exit(1)
 
