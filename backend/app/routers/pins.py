@@ -20,7 +20,8 @@ async def create_pin(
 ):
     """Create a new pin."""
     logger.info(f"Creating pin for user {user_id}: {pin_data.text}")
-    await ModerationService.check_text_for_pii(pin_data.text)
+    PinService.check_rate_limit(db, user_id)
+    await ModerationService.check_text_for_pii(db, pin_data.text, user_id, "pin")
     db_pin = PinService.create_pin(db, pin_data, user_id)
     return db_pin
 
@@ -35,7 +36,7 @@ async def update_pin(
     """Update an existing pin. Only the owner can edit."""
     logger.info(f"Updating pin {pin_id} for user {user_id}")
     if pin_data.text:
-        await ModerationService.check_text_for_pii(pin_data.text)
+        await ModerationService.check_text_for_pii(db, pin_data.text, user_id, "pin")
     db_pin = PinService.update_pin(db, pin_id, user_id, pin_data)
     return db_pin
 

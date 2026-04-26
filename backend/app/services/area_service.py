@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from shapely.geometry import Polygon as ShapelyPolygon
-from app.models import AreaModel
+from app.models import AreaModel, ModerationLogModel
 from app import schemas
 from app.config import settings
 
@@ -36,18 +36,26 @@ class AreaService:
                             detail=f"Area too large: Bounding box must be smaller than {settings.max_area_size_deg} degrees."
                         )
 
-        # 2. Rate limit check: max 20 areas per 24 hours
+    @staticmethod
+    def check_rate_limit(db: Session, user_id: str) -> None:
+        """Check if the user has exceeded their daily limit for creating areas (including rejected attempts)."""
         one_day_ago = datetime.now(timezone.utc) - timedelta(days=1)
-        area_count = db.query(func.count(AreaModel.id)).filter(
-            AreaModel.user_id == user_id,
-            AreaModel.created_at >= one_day_ago
+        # Count all moderation attempts for areas by this user in the last 24h
+        attempt_count = db.query(func.count(ModerationLogModel.id)).filter(
+            ModerationLogModel.user_id == user_id,
+            ModerationLogModel.action == "area",
+            ModerationLogModel.created_at >= one_day_ago
         ).scalar()
         
-        if area_count >= settings.max_areas_per_day:
+        if attempt_count >= settings.max_areas_per_day:
             raise HTTPException(
                 status_code=429, 
-                detail=f"Rate limit exceeded: Maximum {settings.max_areas_per_day} areas per day allowed."
+                detail=f"Rate limit exceeded: Maximum {settings.max_areas_per_day} attempts per day allowed."
             )
+
+    @staticmethod
+    def create_area(db: Session, area_data: schemas.AreaCreate, user_id: str) -> AreaModel:
+        # 1. Size check
 
         # 3. Overlap check
         if area_data.latlngs:

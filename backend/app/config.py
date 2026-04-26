@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     deepseek_api_key: str = ""
     
     # Abuse prevention limits
-    max_pins_per_day: int = 20
-    max_areas_per_day: int = 20
-    max_comments_per_day: int = 20
+    max_pins_per_day: int = 10
+    max_areas_per_day: int = 10
+    max_comments_per_day: int = 10
     max_area_size_deg: float = 0.02  # Approx 2.2km (adjusted to 0.02)
     
     class Config:

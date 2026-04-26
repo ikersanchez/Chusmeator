@@ -21,7 +21,8 @@ async def create_area(
     """Create a new area."""
     try:
         logger.info(f"Creating area for user {user_id}: {area_data.text}")
-        await ModerationService.check_text_for_pii(area_data.text)
+        AreaService.check_rate_limit(db, user_id)
+        await ModerationService.check_text_for_pii(db, area_data.text, user_id, "area")
         db_area = AreaService.create_area(db, area_data, user_id)
         return db_area
     except HTTPException:

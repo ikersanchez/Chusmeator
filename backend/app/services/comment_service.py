@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from app.models import CommentModel, PinModel, AreaModel
+from app.models import CommentModel, ModerationLogModel, PinModel, AreaModel
 from app import schemas
 from fastapi import HTTPException
 from app.config import settings
@@ -30,22 +30,26 @@ class CommentService:
         ).order_by(CommentModel.created_at.desc()).all()
 
     @staticmethod
-    def create_comment(db: Session, target_type: str, target_id: int, comment_data: schemas.CommentCreate, user_id: str) -> CommentModel:
-        CommentService._validate_target(db, target_type, target_id)
-            
-        # Rate limit check: max comments per 24 hours (across all targets)
-        # Using database time via func.now() avoids timezone mismatches between Python and DB
-        one_day_ago = func.now() - timedelta(days=1)
-        comment_count = db.query(func.count(CommentModel.id)).filter(
-            CommentModel.user_id == user_id,
-            CommentModel.created_at >= one_day_ago
+    def check_rate_limit(db: Session, user_id: str) -> None:
+        """Check if the user has exceeded their daily limit for creating comments (including rejected attempts)."""
+        one_day_ago = datetime.now(timezone.utc) - timedelta(days=1)
+        # Count all moderation attempts for comments by this user in the last 24h
+        attempt_count = db.query(func.count(ModerationLogModel.id)).filter(
+            ModerationLogModel.user_id == user_id,
+            ModerationLogModel.action == "comment",
+            ModerationLogModel.created_at >= one_day_ago
         ).scalar()
         
-        if comment_count >= settings.max_comments_per_day:
+        if attempt_count >= settings.max_comments_per_day:
             raise HTTPException(
                 status_code=429, 
-                detail=f"Rate limit exceeded: Maximum {settings.max_comments_per_day} comments per day allowed."
+                detail=f"Rate limit exceeded: Maximum {settings.max_comments_per_day} attempts per day allowed."
             )
+
+    @staticmethod
+    def create_comment(db: Session, target_type: str, target_id: int, comment_data: schemas.CommentCreate, user_id: str) -> CommentModel:
+        CommentService._validate_target(db, target_type, target_id)
+        # Rate limit is now checked in the router before moderation
             
         db_comment = CommentModel(
             target_type=target_type,

@@ -2,25 +2,31 @@ from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from app.models import PinModel
+from app.models import PinModel, ModerationLogModel
 from app import schemas
 from app.config import settings
 
 class PinService:
     @staticmethod
-    def create_pin(db: Session, pin_data: schemas.PinCreate, user_id: str) -> PinModel:
-        # Rate limit check: max 20 pins per 24 hours
+    def check_rate_limit(db: Session, user_id: str) -> None:
+        """Check if the user has exceeded their daily limit for creating pins (including rejected attempts)."""
         one_day_ago = datetime.now(timezone.utc) - timedelta(days=1)
-        pin_count = db.query(func.count(PinModel.id)).filter(
-            PinModel.user_id == user_id,
-            PinModel.created_at >= one_day_ago
+        # Count all moderation attempts for pins by this user in the last 24h
+        attempt_count = db.query(func.count(ModerationLogModel.id)).filter(
+            ModerationLogModel.user_id == user_id,
+            ModerationLogModel.action == "pin",
+            ModerationLogModel.created_at >= one_day_ago
         ).scalar()
         
-        if pin_count >= settings.max_pins_per_day:
+        if attempt_count >= settings.max_pins_per_day:
             raise HTTPException(
                 status_code=429, 
-                detail=f"Rate limit exceeded: Maximum {settings.max_pins_per_day} pins per day allowed."
+                detail=f"Rate limit exceeded: Maximum {settings.max_pins_per_day} attempts per day allowed."
             )
+
+    @staticmethod
+    def create_pin(db: Session, pin_data: schemas.PinCreate, user_id: str) -> PinModel:
+        # Rate limit is now checked in the router before moderation
 
         db_pin = PinModel(
             lat=pin_data.lat,

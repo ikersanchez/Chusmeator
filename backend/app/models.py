@@ -86,3 +86,15 @@ class VoteModel(Base):
         CheckConstraint("value IN (1, -1)", name="check_vote_value"),
         UniqueConstraint("user_id", "target_type", "target_id", name="uq_vote"),
     )
+
+
+class ModerationLogModel(Base):
+    """Log of moderation attempts to track usage and prevent abuse even for rejected content."""
+    __tablename__ = "moderation_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(50), ForeignKey("users.id"), nullable=False)
+    action = Column(String(20), nullable=False)  # "pin", "area", "comment"
+    result = Column(String(20), nullable=False)  # "SAFE", "PII", "CRIME", "OFFENSIVE", "ERROR"
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
